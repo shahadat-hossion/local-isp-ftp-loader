@@ -1,0 +1,9 @@
+*.log
+build/
+dist/
+bin/
+obj/
+Import-ImdbTop250.ps1
+.vs/
+.idea/
+

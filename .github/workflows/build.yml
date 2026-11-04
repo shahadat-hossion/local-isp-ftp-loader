@@ -1,0 +1,26 @@
+name: Build plugin
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Build release package
+        shell: pwsh
+        run: .\build.ps1
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sam-Online-FTP-Loader
+          path: |
+            dist/Sam-Online-FTP-Loader-*.zip
+            dist/Sam-Online-FTP-Loader-*.zip.md5
