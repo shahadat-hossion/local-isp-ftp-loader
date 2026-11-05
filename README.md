@@ -1,6 +1,6 @@
 # Sam Online FTP Loader for Jellyfin
 
-Sam Online FTP Loader for Jellyfin is an administrator-only Jellyfin 12 plugin built specifically for the private media indexes available to **Sam Online** network users. It lets a Jellyfin administrator search for a movie, TV/web series, or anime title without manually browsing the FTP server or copying a folder link.
+Sam Online FTP Loader for Jellyfin is a Jellyfin 12 plugin built for the private media indexes available to **Sam Online** network users and other private local media servers. Every signed-in Jellyfin user can search and add a movie, TV/web series, or anime title from a PC, TV, or phone without manually browsing the FTP server or copying a folder link.
 
 The plugin searches the predefined Sam Online HTTP directory indexes, displays matching titles in a poster grid, discovers the playable files inside the selected folder, and creates correctly organized `.strm` files in an existing Jellyfin library. Jellyfin reads each `.strm` file as a pointer to the original remote video; the plugin does not download or duplicate the video itself.
 
@@ -10,14 +10,14 @@ The plugin searches the predefined Sam Online HTTP directory indexes, displays m
 ## Requirements
 
 - Jellyfin Server `12.0.0` with the matching plugin ABI `12.0.0.0`.
-- A Jellyfin administrator account. The page and every API endpoint require administrator elevation.
+- Any signed-in Jellyfin user account. Administrator elevation is not required.
 - Network access from the Jellyfin server to the Sam Online `172.16.50.x` media servers.
 - At least one compatible Movies or Shows library whose folder is writable by the Jellyfin server process.
 - Permission to use the remote media made available by your network provider.
 
 ## Install from the Jellyfin catalog
 
-1. Sign in to Jellyfin as an administrator.
+1. Sign in to Jellyfin. An administrator is needed only for the initial repository and plugin installation.
 2. Open **Dashboard > Plugins > Repositories**.
 3. Select **Add Repository**.
 4. Enter the repository name `Sam Online FTP Loader for Jellyfin`.
@@ -31,13 +31,13 @@ The plugin searches the predefined Sam Online HTTP directory indexes, displays m
 7. Open **Dashboard > Plugins > Catalog**.
 8. Find **Sam Online FTP Loader for Jellyfin**, open it, and select **Install**.
 9. Restart Jellyfin after installation.
-10. Open **Dashboard > Sam Online FTP Loader** from the administrator menu.
+10. Open **Add Media** from Jellyfin's main navigation menu on a PC, TV, or phone.
 
 If the plugin is not visible in Catalog, confirm that the repository URL opens from the Jellyfin server and that `manifest.json` is valid. If installation reports an incompatible version, confirm that the server is Jellyfin `12.0.0`.
 
 ## Search and add media
 
-1. Open **Dashboard > Sam Online FTP Loader**.
+1. Open **Add Media** from Jellyfin's main navigation menu.
 2. Select a media type:
    - **Movies** searches the mapped movie indexes.
    - **Shows** searches TV, web, Korean, documentary, tutorial, wrestling, awards, and special-program indexes.
@@ -54,7 +54,11 @@ Existing destination files are skipped instead of overwritten. Movies and series
 
 ## Sam Online source mapping
 
-The source list is built into the plugin; there is no media-output-root or source-server settings page.
+The Sam Online source list is built into the plugin. Additional private servers can be added from the **Add Media** page; no media-output-root setting is required because users select an existing Jellyfin library when adding a title.
+
+### Add a custom local server
+
+Open **Add Media > Custom local media servers**, then enter a name, media type, and private server URL. Supported source schemes are `http://`, `https://`, and `ftp://`. Optional FTP credentials can be saved with the source. Only loopback and private IPv4 ranges (`10.x`, `172.16-31.x`, and `192.168.x`) are accepted. Once saved, the source is included automatically when users search its mapped media type.
 
 ### Movies
 
@@ -84,7 +88,7 @@ The directory names still contain the provider's existing `DHAKA-FLIX` path labe
 - It does not download video files to the Jellyfin server.
 - It does not use or scan `D:\Server\Jellyfin Remote`.
 - It does not add or reconfigure Jellyfin libraries automatically.
-- It does not expose the search page to normal Jellyfin users.
+- It does not allow anonymous access; a valid Jellyfin login is still required.
 - It does not accept arbitrary public FTP or HTTP roots.
 - It cannot make the Sam Online private servers reachable from another ISP.
 
@@ -121,7 +125,7 @@ The `.strm` file points directly to the Sam Online server. Playback depends on t
 
 ## Manual installation
 
-Download `Sam-Online-FTP-Loader-2.1.1.zip` from GitHub Releases. Extract it into a folder named `Sam Online FTP Loader` inside Jellyfin's plugins directory, then restart Jellyfin.
+Download the latest `Sam-Online-FTP-Loader-*.zip` from GitHub Releases. Extract it into a folder named `Sam Online FTP Loader` inside Jellyfin's plugins directory, then restart Jellyfin.
 
 For a Windows tray installation, the usual destination is:
 
@@ -143,7 +147,7 @@ The script publishes the project and creates the release ZIP plus an MD5 checksu
 
 ## Security model
 
-- All controller endpoints use Jellyfin's `RequiresElevation` authorization policy.
+- All controller endpoints require an authenticated Jellyfin user, but administrator elevation is intentionally not required.
 - The service accepts only the built-in private/local source roots.
 - A destination must match a current compatible Jellyfin library.
 - File and folder names are sanitized before local output is created.

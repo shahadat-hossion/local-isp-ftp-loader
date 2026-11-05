@@ -2,22 +2,25 @@ using System.Net;
 using System.Text.RegularExpressions;
 using Jellyfin.Plugin.LinkAdder.Models;
 using System.Net.Sockets;
+using Jellyfin.Plugin.LinkAdder.Configuration;
 
 namespace Jellyfin.Plugin.LinkAdder.Services;
 public sealed partial class LinkAdderService
 {
     private static readonly HashSet<string> VideoExtensions = new(StringComparer.OrdinalIgnoreCase) { ".mkv", ".mp4", ".avi", ".mov", ".m4v", ".ts", ".m2ts", ".webm", ".wmv", ".mpg", ".mpeg" };
     private readonly HttpClient _http;
-    public LinkAdderService(HttpClient http) { _http=http; _http.Timeout=TimeSpan.FromSeconds(20); _http.DefaultRequestHeaders.UserAgent.ParseAdd("Jellyfin-LinkAdder/1.0"); }
+    private readonly CustomSource[] _customSources;
+    private sealed record RemoteRoot(string Name, Uri Url, string Username = "", string Password = "");
+    public LinkAdderService(HttpClient http, IEnumerable<CustomSource>? customSources = null) { _http=http; _http.Timeout=TimeSpan.FromSeconds(20); _http.DefaultRequestHeaders.UserAgent.ParseAdd("Sam-Online-FTP-Loader/2.2"); _customSources=(customSources??[]).ToArray(); }
 
     public async Task<IReadOnlyList<RemoteSearchResult>> SearchRemoteAsync(string mediaType,string query,CancellationToken ct)
     {
-        query=(query??string.Empty).Trim();if(query.Length<2)throw new InvalidOperationException("Enter at least 2 characters.");var tasks=RemoteRoots(mediaType).Select(root=>SearchRootAsync(root.Url,root.Name,query,ct));var groups=await Task.WhenAll(tasks).ConfigureAwait(false);return groups.SelectMany(x=>x).GroupBy(x=>x.Url,StringComparer.OrdinalIgnoreCase).Select(x=>x.First()).OrderBy(x=>x.Name.StartsWith(query,StringComparison.OrdinalIgnoreCase)?0:1).ThenBy(x=>x.Name,StringComparer.OrdinalIgnoreCase).Take(100).ToArray();
+        query=(query??string.Empty).Trim();if(query.Length<2)throw new InvalidOperationException("Enter at least 2 characters.");var tasks=RemoteRoots(mediaType).Select(root=>SearchRootAsync(root,query,ct));var groups=await Task.WhenAll(tasks).ConfigureAwait(false);return groups.SelectMany(x=>x).GroupBy(x=>x.Url,StringComparer.OrdinalIgnoreCase).Select(x=>x.First()).OrderBy(x=>x.Name.StartsWith(query,StringComparison.OrdinalIgnoreCase)?0:1).ThenBy(x=>x.Name,StringComparer.OrdinalIgnoreCase).Take(100).ToArray();
     }
     public async Task<PreviewResult> PreviewAsync(string sourceUrl,string mediaType,string? requestedTitle,CancellationToken ct)
     {
         if(mediaType=="anime")mediaType="series";
-        var source=ValidateSource(sourceUrl); IReadOnlyList<Uri> videos=IsVideo(source)?[source]:await CrawlVideosAsync(source,ct).ConfigureAwait(false); if(videos.Count==0) throw new InvalidOperationException("No supported video files were found."); var title=string.IsNullOrWhiteSpace(requestedTitle)?InferTitle(source,mediaType):CleanName(requestedTitle); return new(title,MakePlan(videos,mediaType,title));
+        var source=ValidateConfiguredSource(sourceUrl); IReadOnlyList<Uri> videos=IsVideo(source)?[source]:await CrawlVideosAsync(source,ct).ConfigureAwait(false); if(videos.Count==0) throw new InvalidOperationException("No supported video files were found."); var title=string.IsNullOrWhiteSpace(requestedTitle)?InferTitle(source,mediaType):CleanName(requestedTitle); return new(title,MakePlan(videos,mediaType,title));
     }
 
     public AddResult Write(PreviewResult preview,string outputRoot)
@@ -27,39 +30,54 @@ public sealed partial class LinkAdderService
         return new(created,skipped,"Library scan requested.");
     }
 
-    private async Task<IReadOnlyList<RemoteSearchResult>> SearchRootAsync(Uri root,string source,string query,CancellationToken ct)
+    private async Task<IReadOnlyList<RemoteSearchResult>> SearchRootAsync(RemoteRoot root,string query,CancellationToken ct)
     {
-        var results=new List<RemoteSearchResult>();var visited=new HashSet<string>(StringComparer.OrdinalIgnoreCase);var queue=new Queue<(Uri Url,int Depth)>();queue.Enqueue((root,0));
-        try{while(queue.Count>0&&visited.Count<300){var(page,depth)=queue.Dequeue();if(!visited.Add(page.AbsoluteUri))continue;var body=await _http.GetStringAsync(page,ct).ConfigureAwait(false);foreach(var link in ExtractLinks(page,body)){if(!IsWithin(root,link)||!link.AbsolutePath.EndsWith('/'))continue;var name=WebUtility.UrlDecode(Path.GetFileName(link.AbsolutePath.TrimEnd('/')));if(name is "" or "." or "..")continue;var structural=IsStructuralFolder(name);if(name.Contains(query,StringComparison.OrdinalIgnoreCase)&&!structural)results.Add(new(name,link.AbsoluteUri,source,await FindPosterAsync(link,ct).ConfigureAwait(false)));if(depth<2&&structural)queue.Enqueue((link,depth+1));}}}catch(HttpRequestException){}catch(TaskCanceledException) when(!ct.IsCancellationRequested){}
+        var results=new List<RemoteSearchResult>();var visited=new HashSet<string>(StringComparer.OrdinalIgnoreCase);var queue=new Queue<(Uri Url,int Depth)>();queue.Enqueue((root.Url,0));
+        try{while(queue.Count>0&&visited.Count<300){var(page,depth)=queue.Dequeue();if(!visited.Add(page.AbsoluteUri))continue;foreach(var link in await ListLinksAsync(page,root,ct).ConfigureAwait(false)){if(!IsWithin(root.Url,link)||!link.AbsolutePath.EndsWith('/'))continue;var name=WebUtility.UrlDecode(Path.GetFileName(link.AbsolutePath.TrimEnd('/')));if(name is "" or "." or "..")continue;var structural=IsStructuralFolder(name);if(name.Contains(query,StringComparison.OrdinalIgnoreCase)&&!structural)results.Add(new(name,link.AbsoluteUri,root.Name,await FindPosterAsync(link,root,ct).ConfigureAwait(false)));if(depth<2&&structural)queue.Enqueue((link,depth+1));}}}catch(WebException){}catch(HttpRequestException){}catch(TaskCanceledException) when(!ct.IsCancellationRequested){}
         return results;
     }
 
-    private async Task<string> FindPosterAsync(Uri folder,CancellationToken ct)
+    private async Task<string> FindPosterAsync(Uri folder,RemoteRoot root,CancellationToken ct)
     {
-        try{var body=await _http.GetStringAsync(folder,ct).ConfigureAwait(false);var image=ExtractLinks(folder,body).FirstOrDefault(link=>!link.AbsolutePath.StartsWith("/_h5ai/",StringComparison.OrdinalIgnoreCase)&&PosterRegex().IsMatch(link.AbsolutePath));return image?.AbsoluteUri??string.Empty;}catch(HttpRequestException){return string.Empty;}catch(TaskCanceledException) when(!ct.IsCancellationRequested){return string.Empty;}
+        try{var image=(await ListLinksAsync(folder,root,ct).ConfigureAwait(false)).FirstOrDefault(link=>!link.AbsolutePath.StartsWith("/_h5ai/",StringComparison.OrdinalIgnoreCase)&&PosterRegex().IsMatch(link.AbsolutePath));return image?.Scheme is "http" or "https"?image.AbsoluteUri:string.Empty;}catch(WebException){return string.Empty;}catch(HttpRequestException){return string.Empty;}catch(TaskCanceledException) when(!ct.IsCancellationRequested){return string.Empty;}
     }
 
     private static bool IsStructuralFolder(string name)=>StructuralRegex().IsMatch(name)||name.Contains('—')||name.Contains("Before",StringComparison.OrdinalIgnoreCase)||name.Contains("Series",StringComparison.OrdinalIgnoreCase)&&name.Length<40;
 
-    private static (string Name,Uri Url)[] RemoteRoots(string mediaType)=>mediaType switch
+    private RemoteRoot[] RemoteRoots(string mediaType)
     {
-        "movie"=>[("Animation",new("http://172.16.50.14/DHAKA-FLIX-14/Animation%20Movies/")),("Animation 1080p",new("http://172.16.50.14/DHAKA-FLIX-14/Animation%20Movies%20%281080p%29/")),("English Movies",new("http://172.16.50.14/DHAKA-FLIX-14/English%20Movies%20%281080p%29/")),("Hindi Movies",new("http://172.16.50.14/DHAKA-FLIX-14/Hindi%20Movies/")),("IMDb Top 250",new("http://172.16.50.14/DHAKA-FLIX-14/IMDb%20Top-250%20Movies/")),("Hindi Dubbed",new("http://172.16.50.14/DHAKA-FLIX-14/SOUTH%20INDIAN%20MOVIES/Hindi%20Dubbed/")),("South Movies",new("http://172.16.50.14/DHAKA-FLIX-14/SOUTH%20INDIAN%20MOVIES/South%20Movies/"))],
-        "series"=>[("TV & Web Series",new("http://172.16.50.12/DHAKA-FLIX-12/TV-WEB-Series/")),("Korean Series",new("http://172.16.50.14/DHAKA-FLIX-14/KOREAN%20TV%20%26%20WEB%20Series/")),("Awards",new("http://172.16.50.10/DHAKA-FLIX-10/Awards%20%26%20TV%20Shows/%23%20AWARDS/")),("FIFA World Cup",new("http://172.16.50.10/DHAKA-FLIX-10/Awards%20%26%20TV%20Shows/%23%20FIFA%20World%20Cup%20Qatar%202022/")),("TV Specials",new("http://172.16.50.10/DHAKA-FLIX-10/Awards%20%26%20TV%20Shows/%23%20TV%20SPECIAL%20%26%20SHOWS/")),("Documentary",new("http://172.16.50.10/DHAKA-FLIX-10/Documentary/")),("Tutorial",new("http://172.16.50.10/DHAKA-FLIX-10/Tutorial/")),("WWE",new("http://172.16.50.10/DHAKA-FLIX-10/WWE%20%26%20AEW%20Wrestling/WWE%20Wrestling/")),("AEW",new("http://172.16.50.10/DHAKA-FLIX-10/WWE%20%26%20AEW%20Wrestling/AEW%20Wrestling/"))],
-        "anime"=>[("Anime",new("http://172.16.50.10/DHAKA-FLIX-10/Anime%20%26%20Cartoon%20TV%20Series/"))],
-        _=>throw new InvalidOperationException("Choose Movies, Shows, or Anime.")
-    };
+        var builtIn = mediaType switch
+        {
+            "movie"=>new RemoteRoot[]{new("Animation",new("http://172.16.50.14/DHAKA-FLIX-14/Animation%20Movies/")),new("Animation 1080p",new("http://172.16.50.14/DHAKA-FLIX-14/Animation%20Movies%20%281080p%29/")),new("English Movies",new("http://172.16.50.14/DHAKA-FLIX-14/English%20Movies%20%281080p%29/")),new("Hindi Movies",new("http://172.16.50.14/DHAKA-FLIX-14/Hindi%20Movies/")),new("IMDb Top 250",new("http://172.16.50.14/DHAKA-FLIX-14/IMDb%20Top-250%20Movies/")),new("Hindi Dubbed",new("http://172.16.50.14/DHAKA-FLIX-14/SOUTH%20INDIAN%20MOVIES/Hindi%20Dubbed/")),new("South Movies",new("http://172.16.50.14/DHAKA-FLIX-14/SOUTH%20INDIAN%20MOVIES/South%20Movies/"))},
+            "series"=>new RemoteRoot[]{new("TV & Web Series",new("http://172.16.50.12/DHAKA-FLIX-12/TV-WEB-Series/")),new("Korean Series",new("http://172.16.50.14/DHAKA-FLIX-14/KOREAN%20TV%20%26%20WEB%20Series/")),new("Awards",new("http://172.16.50.10/DHAKA-FLIX-10/Awards%20%26%20TV%20Shows/%23%20AWARDS/")),new("FIFA World Cup",new("http://172.16.50.10/DHAKA-FLIX-10/Awards%20%26%20TV%20Shows/%23%20FIFA%20World%20Cup%20Qatar%202022/")),new("TV Specials",new("http://172.16.50.10/DHAKA-FLIX-10/Awards%20%26%20TV%20Shows/%23%20TV%20SPECIAL%20%26%20SHOWS/")),new("Documentary",new("http://172.16.50.10/DHAKA-FLIX-10/Documentary/")),new("Tutorial",new("http://172.16.50.10/DHAKA-FLIX-10/Tutorial/")),new("WWE",new("http://172.16.50.10/DHAKA-FLIX-10/WWE%20%26%20AEW%20Wrestling/WWE%20Wrestling/")),new("AEW",new("http://172.16.50.10/DHAKA-FLIX-10/WWE%20%26%20AEW%20Wrestling/AEW%20Wrestling/"))},
+            "anime"=>new RemoteRoot[]{new("Anime",new("http://172.16.50.10/DHAKA-FLIX-10/Anime%20%26%20Cartoon%20TV%20Series/"))},
+            _=>throw new InvalidOperationException("Choose Movies, Shows, or Anime.")
+        };
+        return builtIn.Concat(_customSources.Where(x=>x.MediaType==mediaType).Select(x=>new RemoteRoot(x.Name,new Uri(x.Url),x.Username,x.Password))).ToArray();
+    }
 
     private async Task<IReadOnlyList<Uri>> CrawlVideosAsync(Uri root,CancellationToken ct)
     {
         var videos=new HashSet<Uri>(); var visited=new HashSet<string>(StringComparer.OrdinalIgnoreCase); var queue=new Queue<(Uri,int)>(); queue.Enqueue((root,0));
-        while(queue.Count>0) { if(visited.Count>=500) throw new InvalidOperationException("This folder is too large. Paste the direct movie or series folder link."); var(page,depth)=queue.Dequeue(); if(!visited.Add(page.AbsoluteUri))continue; var content=await _http.GetStringAsync(page,ct).ConfigureAwait(false); foreach(var link in ExtractLinks(page,content)){if(!IsWithin(root,link))continue;if(IsVideo(link))videos.Add(link);else if(depth<6&&link.AbsolutePath.EndsWith('/'))queue.Enqueue((link,depth+1));}}
+        var source=FindRoot(root);while(queue.Count>0) { if(visited.Count>=500) throw new InvalidOperationException("This folder is too large. Select a more specific movie or series folder."); var(page,depth)=queue.Dequeue(); if(!visited.Add(page.AbsoluteUri))continue; foreach(var link in await ListLinksAsync(page,source,ct).ConfigureAwait(false)){if(!IsWithin(root,link))continue;if(IsVideo(link))videos.Add(link);else if(depth<6&&link.AbsolutePath.EndsWith('/'))queue.Enqueue((link,depth+1));}}
         return videos.OrderBy(x=>x.AbsoluteUri,StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
-    private Uri ValidateSource(string value)
+    public Uri ValidateConfiguredSource(string value)
     {
-        if(!Uri.TryCreate(value?.Trim(),UriKind.Absolute,out var uri)||(uri.Scheme!="http"&&uri.Scheme!="https")) throw new InvalidOperationException("Use a complete HTTP or HTTPS link.");
-        if(!IPAddress.TryParse(uri.Host,out var address) || !IsPrivate(address)) throw new InvalidOperationException("Only local-server IP links are allowed."); return uri;
+        if(!Uri.TryCreate(value?.Trim(),UriKind.Absolute,out var uri)||uri.Scheme is not("http" or "https" or "ftp")) throw new InvalidOperationException("Use a complete HTTP, HTTPS, or FTP link.");
+        if(!IPAddress.TryParse(uri.Host,out var address) || !IsPrivate(address)) throw new InvalidOperationException("Only local-server IP links are allowed.");
+        if(!RemoteRoots("movie").Concat(RemoteRoots("series")).Concat(RemoteRoots("anime")).Any(x=>IsWithin(x.Url,uri)||x.Url.AbsoluteUri.Equals(uri.AbsoluteUri,StringComparison.OrdinalIgnoreCase))) throw new InvalidOperationException("The link is not inside a configured media source.");return uri;
+    }
+
+    private RemoteRoot FindRoot(Uri value)=>RemoteRoots("movie").Concat(RemoteRoots("series")).Concat(RemoteRoots("anime")).OrderByDescending(x=>x.Url.AbsolutePath.Length).First(x=>IsWithin(x.Url,value)||x.Url.AbsoluteUri.Equals(value.AbsoluteUri,StringComparison.OrdinalIgnoreCase));
+    private async Task<IReadOnlyList<Uri>> ListLinksAsync(Uri folder,RemoteRoot root,CancellationToken ct)
+    {
+        if(folder.Scheme!="ftp"){var body=await _http.GetStringAsync(folder,ct).ConfigureAwait(false);return ExtractLinks(folder,body).ToArray();}
+#pragma warning disable SYSLIB0014
+        var request=(FtpWebRequest)WebRequest.Create(folder);request.Method=WebRequestMethods.Ftp.ListDirectory;request.UsePassive=true;request.UseBinary=true;request.KeepAlive=false;if(root.Username.Length>0)request.Credentials=new NetworkCredential(root.Username,root.Password);else request.Credentials=new NetworkCredential("anonymous","anonymous@");
+        using var response=(FtpWebResponse)await request.GetResponseAsync().WaitAsync(ct).ConfigureAwait(false);using var reader=new StreamReader(response.GetResponseStream());var links=new List<Uri>();while(await reader.ReadLineAsync(ct).ConfigureAwait(false) is { } raw){var name=raw.Trim().Trim('/');if(name is "" or "." or "..")continue;name=Path.GetFileName(name.Replace('\\','/'));var isFile=VideoExtensions.Contains(Path.GetExtension(name))||PosterRegex().IsMatch(name);var escaped=Uri.EscapeDataString(name).Replace("%2F","/",StringComparison.OrdinalIgnoreCase);links.Add(new Uri(folder,escaped+(isFile?string.Empty:"/")));}return links;
+#pragma warning restore SYSLIB0014
     }
     private static bool IsPrivate(IPAddress address){if(IPAddress.IsLoopback(address))return true;if(address.AddressFamily!=AddressFamily.InterNetwork)return false;var b=address.GetAddressBytes();return b[0]==10||(b[0]==172&&b[1]>=16&&b[1]<=31)||(b[0]==192&&b[1]==168);}
     private static IEnumerable<Uri> ExtractLinks(Uri page,string body){foreach(Match m in HrefRegex().Matches(body)){var href=WebUtility.HtmlDecode(m.Groups[1].Value);if(Uri.TryCreate(page,href,out var link)&&(link.Scheme=="http"||link.Scheme=="https"))yield return new UriBuilder(link){Fragment=string.Empty}.Uri;}}

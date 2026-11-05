@@ -8,6 +8,14 @@
     "overview": "Search Sam Online media and add STRM entries to Jellyfin libraries.",
     "versions": [
       {
+        "version": "2.2.0.0",
+        "changelog": "Add Media main-menu page for every signed-in user, custom private HTTP/HTTPS/FTP sources, and all compatible Jellyfin libraries.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/shahadat-hossion/sam-online-ftp-loader-for-jellyfin/releases/download/v2.2.0/Sam-Online-FTP-Loader-2.2.0.zip",
+        "checksum": "3ecb86c7ff41aaac19d1cd2b6347feb0",
+        "timestamp": "2026-11-05T00:00:00Z"
+      },
+      {
         "version": "2.1.1.0",
         "changelog": "Poster-card search results and complete Movies, Shows, and Anime directory mapping.",
         "targetAbi": "12.0.0.0",

@@ -1,14 +1,14 @@
 {
   "category": "General",
-  "changelog": "Poster-card search results and complete Movies, Shows, and Anime directory mapping.",
-  "description": "Admin-only Sam Online media search and STRM importer.",
+  "changelog": "Add Media main-menu page for every signed-in user, custom private HTTP/HTTPS/FTP sources, and all compatible Jellyfin libraries.",
+  "description": "Search Sam Online or custom local media servers and add STRM entries from any signed-in Jellyfin device.",
   "guid": "9399b942-4b6d-46a7-9a5d-a01764f7ee6a",
   "name": "Sam Online FTP Loader for Jellyfin",
   "overview": "Search Sam Online media and create Jellyfin STRM entries.",
   "owner": "shahadat-hossion",
   "targetAbi": "12.0.0.0",
   "timestamp": "2026-11-05T00:00:00.0000000Z",
-  "version": "2.1.1.0",
+  "version": "2.2.0.0",
   "status": "Active",
   "autoUpdate": false,
   "assemblies": []
