@@ -1,14 +1,14 @@
 {
   "category": "General",
-  "changelog": "Place Add Media in Jellyfin 12's visible React/MUI toolbar instead of its hidden legacy header.",
-  "description": "Search built-in ISP indexes or custom local media servers and add STRM entries from any signed-in Jellyfin device.",
+  "changelog": "Remove provider-specific sources, add FTP connection testing, and support any compatible Jellyfin destination library.",
+  "description": "Search user-configured local ISP media servers and add STRM entries from any signed-in Jellyfin device.",
   "guid": "9399b942-4b6d-46a7-9a5d-a01764f7ee6a",
   "name": "Local ISP FTP Loader",
   "overview": "Search local ISP media and create Jellyfin STRM entries.",
   "owner": "shahadat-hossion",
   "targetAbi": "12.0.0.0",
   "timestamp": "2026-11-05T00:00:00.0000000Z",
-  "version": "2.3.2.0",
+  "version": "2.4.0.0",
   "status": "Active",
   "autoUpdate": false,
   "assemblies": []

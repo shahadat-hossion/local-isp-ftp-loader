@@ -15,7 +15,14 @@ public sealed partial class LinkAdderService
 
     public async Task<IReadOnlyList<RemoteSearchResult>> SearchRemoteAsync(string mediaType,string query,CancellationToken ct)
     {
-        query=(query??string.Empty).Trim();if(query.Length<2)throw new InvalidOperationException("Enter at least 2 characters.");var tasks=RemoteRoots(mediaType).Select(root=>SearchRootAsync(root,query,ct));var groups=await Task.WhenAll(tasks).ConfigureAwait(false);return groups.SelectMany(x=>x).GroupBy(x=>x.Url,StringComparer.OrdinalIgnoreCase).Select(x=>x.First()).OrderBy(x=>x.Name.StartsWith(query,StringComparison.OrdinalIgnoreCase)?0:1).ThenBy(x=>x.Name,StringComparer.OrdinalIgnoreCase).Take(100).ToArray();
+        query=(query??string.Empty).Trim();if(query.Length<2)throw new InvalidOperationException("Enter at least 2 characters.");var roots=RemoteRoots(mediaType);if(roots.Length==0)throw new InvalidOperationException("Add a local ISP media source for this media type first.");var tasks=roots.Select(root=>SearchRootAsync(root,query,ct));var groups=await Task.WhenAll(tasks).ConfigureAwait(false);return groups.SelectMany(x=>x).GroupBy(x=>x.Url,StringComparer.OrdinalIgnoreCase).Select(x=>x.First()).OrderBy(x=>x.Name.StartsWith(query,StringComparison.OrdinalIgnoreCase)?0:1).ThenBy(x=>x.Name,StringComparer.OrdinalIgnoreCase).Take(100).ToArray();
+    }
+
+    public async Task<int> TestConnectionAsync(string sourceUrl,string? username,string? password,CancellationToken ct)
+    {
+        if(!Uri.TryCreate(sourceUrl?.Trim(),UriKind.Absolute,out var uri)||uri.Scheme is not("http" or "https" or "ftp"))throw new InvalidOperationException("Use a complete HTTP, HTTPS, or FTP URL.");
+        var root=new RemoteRoot("Connection test",uri.AbsolutePath.EndsWith('/')?uri:new Uri(uri.AbsoluteUri+"/"),(username??string.Empty).Trim(),password??string.Empty);
+        return (await ListLinksAsync(root.Url,root,ct).ConfigureAwait(false)).Count;
     }
     public async Task<PreviewResult> PreviewAsync(string sourceUrl,string mediaType,string? requestedTitle,CancellationToken ct)
     {
@@ -46,14 +53,8 @@ public sealed partial class LinkAdderService
 
     private RemoteRoot[] RemoteRoots(string mediaType)
     {
-        var builtIn = mediaType switch
-        {
-            "movie"=>new RemoteRoot[]{new("Animation",new("http://172.16.50.14/DHAKA-FLIX-14/Animation%20Movies/")),new("Animation 1080p",new("http://172.16.50.14/DHAKA-FLIX-14/Animation%20Movies%20%281080p%29/")),new("English Movies",new("http://172.16.50.14/DHAKA-FLIX-14/English%20Movies%20%281080p%29/")),new("Hindi Movies",new("http://172.16.50.14/DHAKA-FLIX-14/Hindi%20Movies/")),new("IMDb Top 250",new("http://172.16.50.14/DHAKA-FLIX-14/IMDb%20Top-250%20Movies/")),new("Hindi Dubbed",new("http://172.16.50.14/DHAKA-FLIX-14/SOUTH%20INDIAN%20MOVIES/Hindi%20Dubbed/")),new("South Movies",new("http://172.16.50.14/DHAKA-FLIX-14/SOUTH%20INDIAN%20MOVIES/South%20Movies/"))},
-            "series"=>new RemoteRoot[]{new("TV & Web Series",new("http://172.16.50.12/DHAKA-FLIX-12/TV-WEB-Series/")),new("Korean Series",new("http://172.16.50.14/DHAKA-FLIX-14/KOREAN%20TV%20%26%20WEB%20Series/")),new("Awards",new("http://172.16.50.10/DHAKA-FLIX-10/Awards%20%26%20TV%20Shows/%23%20AWARDS/")),new("FIFA World Cup",new("http://172.16.50.10/DHAKA-FLIX-10/Awards%20%26%20TV%20Shows/%23%20FIFA%20World%20Cup%20Qatar%202022/")),new("TV Specials",new("http://172.16.50.10/DHAKA-FLIX-10/Awards%20%26%20TV%20Shows/%23%20TV%20SPECIAL%20%26%20SHOWS/")),new("Documentary",new("http://172.16.50.10/DHAKA-FLIX-10/Documentary/")),new("Tutorial",new("http://172.16.50.10/DHAKA-FLIX-10/Tutorial/")),new("WWE",new("http://172.16.50.10/DHAKA-FLIX-10/WWE%20%26%20AEW%20Wrestling/WWE%20Wrestling/")),new("AEW",new("http://172.16.50.10/DHAKA-FLIX-10/WWE%20%26%20AEW%20Wrestling/AEW%20Wrestling/"))},
-            "anime"=>new RemoteRoot[]{new("Anime",new("http://172.16.50.10/DHAKA-FLIX-10/Anime%20%26%20Cartoon%20TV%20Series/"))},
-            _=>throw new InvalidOperationException("Choose Movies, Shows, or Anime.")
-        };
-        return builtIn.Concat(_customSources.Where(x=>x.MediaType==mediaType).Select(x=>new RemoteRoot(x.Name,new Uri(x.Url),x.Username,x.Password))).ToArray();
+        if(mediaType is not("movie" or "series" or "anime"))throw new InvalidOperationException("Choose Movies, Shows, or Anime.");
+        return _customSources.Where(x=>x.MediaType==mediaType).Select(x=>new RemoteRoot(x.Name,new Uri(x.Url),x.Username,x.Password)).ToArray();
     }
 
     private async Task<IReadOnlyList<Uri>> CrawlVideosAsync(Uri root,CancellationToken ct)

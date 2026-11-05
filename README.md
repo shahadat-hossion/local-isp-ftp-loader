@@ -2,10 +2,10 @@
 
 Local ISP FTP Loader is a Jellyfin 12 plugin for private FTP/HTTP media indexes provided by a local ISP or hosted on another private local server. Every signed-in Jellyfin user can search and add a movie, TV/web series, or anime title from a PC, TV, or phone without manually browsing the server or copying a folder link.
 
-The plugin searches its built-in local ISP directory indexes and user-configured private sources, displays matching titles in a poster grid, discovers the playable files inside the selected folder, and creates correctly organized `.strm` files in an existing Jellyfin library. Jellyfin reads each `.strm` file as a pointer to the original remote video; the plugin does not download or duplicate the video itself.
+The plugin searches user-configured private sources, displays matching titles in a poster grid, discovers the playable files inside the selected folder, and creates correctly organized `.strm` files in an existing Jellyfin library. Jellyfin reads each `.strm` file as a pointer to the original remote video; the plugin does not download or duplicate the video itself.
 
 > [!IMPORTANT]
-> The bundled sources use private FTP/HTTP media servers at `172.16.50.x`. These addresses normally work only while connected to an ISP or network that can route to those servers. It is not a universal FTP browser, torrent downloader, or internet media search plugin.
+> The plugin accepts only loopback and private IPv4 FTP/HTTP sources. The Jellyfin server must be connected to a network that can route to the configured address. It is not a universal FTP browser, torrent downloader, or internet media search plugin.
 
 ## Requirements
 
@@ -46,41 +46,17 @@ If the plugin is not visible in Catalog, confirm that the repository URL opens f
 4. Select **Search**.
 5. Review the poster cards and source-category labels.
 6. Select the correct title. The plugin inspects that remote folder and lists the supported video files it found.
-7. The plugin selects the destination automatically: Movies go to **Sam Movies**, Anime goes to **Sam Anime**, and Shows go to **Sam TV Seris**.
+7. Select any compatible Jellyfin destination library.
 8. Select **Add to Library**.
 9. Wait for Jellyfin to scan the new `.strm` files. Metadata and artwork are then handled by Jellyfin's normal library providers.
 
 Existing destination files are skipped instead of overwritten. Movies and series are placed in a title folder, while series files retain the remote subfolder structure when seasons are available.
 
-## Built-in local ISP source mapping
+## Add a local ISP server
 
-The default private source list is built into the plugin. Additional private servers can be added from the **Add Media** page; no media-output-root setting is required because users select an existing Jellyfin library when adding a title.
+Open **Add Media**, then enter an FTP link title, media type, and private server URL. Supported source schemes are `http://`, `https://`, and `ftp://`. Add optional FTP credentials when required, then select **Test connection**. A successful test turns the button green; a failed test turns it red and displays the error. Select **Add source** to save it.
 
-### Add a custom local server
-
-Open **Add Media > Custom local media servers**, then enter a name, media type, and private server URL. Supported source schemes are `http://`, `https://`, and `ftp://`. Optional FTP credentials can be saved with the source. Only loopback and private IPv4 ranges (`10.x`, `172.16-31.x`, and `192.168.x`) are accepted. Once saved, the source is included automatically when users search its mapped media type.
-
-### Movies
-
-- Animation Movies — `172.16.50.14/DHAKA-FLIX-14/Animation Movies`
-- Animation Movies 1080p — `172.16.50.14/DHAKA-FLIX-14/Animation Movies (1080p)`
-- English Movies 1080p — `172.16.50.14/DHAKA-FLIX-14/English Movies (1080p)`
-- Hindi Movies — `172.16.50.14/DHAKA-FLIX-14/Hindi Movies`
-- IMDb Top 250 Movies — `172.16.50.14/DHAKA-FLIX-14/IMDb Top-250 Movies`
-- Hindi Dubbed South Indian Movies — `172.16.50.14/DHAKA-FLIX-14/SOUTH INDIAN MOVIES/Hindi Dubbed`
-- South Movies — `172.16.50.14/DHAKA-FLIX-14/SOUTH INDIAN MOVIES/South Movies`
-
-### Shows
-
-- TV and Web Series — `172.16.50.12/DHAKA-FLIX-12/TV-WEB-Series`
-- Korean TV and Web Series — `172.16.50.14/DHAKA-FLIX-14/KOREAN TV & WEB Series`
-- Awards, FIFA World Cup, TV specials, documentary, tutorial, WWE, and AEW indexes — `172.16.50.10`
-
-### Anime
-
-- Anime and Cartoon TV Series — `172.16.50.10/DHAKA-FLIX-10/Anime & Cartoon TV Series`
-
-The directory names still contain the provider's existing `DHAKA-FLIX` path labels. That is expected and does not mean the plugin supports unrelated public servers.
+Only loopback and private IPv4 ranges (`10.x`, `172.16-31.x`, and `192.168.x`) are accepted. Add separate sources for Movies, Shows, and Anime as needed. The plugin contains no provider-specific server addresses.
 
 ## What the plugin does not do
 
@@ -96,7 +72,7 @@ The directory names still contain the provider's existing `DHAKA-FLIX` path labe
 
 ### Search returns no results
 
-- Confirm the Jellyfin server can open the relevant `http://172.16.50.x/` address.
+- Use **Test connection** and confirm the Jellyfin server can reach the configured private address.
 - Try a shorter title without a release year or punctuation.
 - Confirm the correct media type is selected.
 - The remote folder may have been renamed, moved, or temporarily taken offline by the provider.

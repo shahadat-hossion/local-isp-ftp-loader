@@ -41,12 +41,29 @@ public sealed class LinkAdderController : ControllerBase
     [HttpPost("Add")]
     public async Task<ActionResult<AddResult>> Add([FromBody] AddRequest request, CancellationToken ct)
     {
-        var option = DefaultLibrary(request.MediaType, LibrariesForValidation());
-        if (option is null) return BadRequest(new { error = $"Create the required {DefaultLibraryName(request.MediaType)} Jellyfin library first." });
+        var mediaType = NormalizeMediaType(request.MediaType);
+        var requestedPath = string.IsNullOrWhiteSpace(request.LibraryPath) ? string.Empty : Path.GetFullPath(request.LibraryPath);
+        var option = LibrariesForValidation().FirstOrDefault(x => x.MediaType == mediaType && x.Path.Equals(requestedPath, StringComparison.OrdinalIgnoreCase));
+        if (option is null) return BadRequest(new { error = "Select a compatible Jellyfin library." });
         var preview = await _service.PreviewAsync(request.Url, request.MediaType, request.Title, ct).ConfigureAwait(false);
         var result = _service.Write(preview, option.Path);
         _ = Task.Run(() => _library.ValidateMediaLibrary(new Progress<double>(), CancellationToken.None));
         return Ok(result with { Refresh = "Jellyfin library scan started." });
+    }
+
+    [HttpPost("Sources/Test")]
+    public async Task<ActionResult<TestSourceResult>> TestSource([FromBody] TestSourceRequest request, CancellationToken ct)
+    {
+        ValidateLocalSource(request.Url);
+        try
+        {
+            var entries = await _service.TestConnectionAsync(request.Url, request.Username, request.Password, ct).ConfigureAwait(false);
+            return Ok(new TestSourceResult(true, entries, $"Connection successful. Found {entries} entries."));
+        }
+        catch (Exception ex) when (ex is HttpRequestException or WebException or IOException or UnauthorizedAccessException or TaskCanceledException)
+        {
+            return BadRequest(new { error = $"Connection failed: {ex.Message}" });
+        }
     }
 
     [HttpGet("Sources")]
@@ -148,19 +165,6 @@ public sealed class LinkAdderController : ControllerBase
         .ToArray();
 
     private static MediaRequestView ToView(MediaAddRequest item) => new(item.Id, item.RequestedBy, item.Title, item.Url, item.MediaType, item.RequestedAtUtc);
-    private static LibraryOption? DefaultLibrary(string mediaType, IEnumerable<LibraryOption> libraries)
-    {
-        var expected = DefaultLibraryName(mediaType);
-        return libraries.FirstOrDefault(x => x.Name.Equals(expected, StringComparison.OrdinalIgnoreCase))
-            ?? (mediaType == "series" ? libraries.FirstOrDefault(x => x.Name.Equals("Sam TV Series", StringComparison.OrdinalIgnoreCase)) : null);
-    }
-    private static string DefaultLibraryName(string mediaType) => mediaType switch
-    {
-        "movie" => "Sam Movies",
-        "anime" => "Sam Anime",
-        "series" => "Sam TV Seris",
-        _ => throw new InvalidOperationException("Choose Movies, Shows, or Anime.")
-    };
     private static string NormalizeMediaType(string? value) => value?.Trim().ToLowerInvariant() switch
     {
         "movie" => "movie",
