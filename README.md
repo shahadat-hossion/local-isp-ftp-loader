@@ -24,7 +24,7 @@ The plugin searches the predefined Sam Online HTTP directory indexes, displays m
 5. Enter this repository URL:
 
    ```text
-   https://raw.githubusercontent.com/shahadat-hossion/sam-online-ftp-loader-for-jellyfin/main/manifest.json
+   https://raw.githubusercontent.com/shahadat-hossion/sam-online-ftp-loader-for-jellyfin/refs/heads/main/manifest.json
    ```
 
 6. Save the repository.
