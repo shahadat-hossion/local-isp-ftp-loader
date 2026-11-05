@@ -1,6 +1,6 @@
 {
   "category": "General",
-  "changelog": "Add Media main-menu page for every signed-in user, custom private HTTP/HTTPS/FTP sources, and all compatible Jellyfin libraries.",
+  "changelog": "Automatically route Movies to Sam Movies, Anime to Sam Anime, and Shows to Sam TV Seris.",
   "description": "Search Sam Online or custom local media servers and add STRM entries from any signed-in Jellyfin device.",
   "guid": "9399b942-4b6d-46a7-9a5d-a01764f7ee6a",
   "name": "Sam Online FTP Loader for Jellyfin",
@@ -8,7 +8,7 @@
   "owner": "shahadat-hossion",
   "targetAbi": "12.0.0.0",
   "timestamp": "2026-11-05T00:00:00.0000000Z",
-  "version": "2.2.0.0",
+  "version": "2.2.1.0",
   "status": "Active",
   "autoUpdate": false,
   "assemblies": []

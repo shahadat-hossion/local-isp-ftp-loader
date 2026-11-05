@@ -46,7 +46,7 @@ If the plugin is not visible in Catalog, confirm that the repository URL opens f
 4. Select **Search**.
 5. Review the poster cards and source-category labels.
 6. Select the correct title. The plugin inspects that remote folder and lists the supported video files it found.
-7. Select the destination Jellyfin library. Only compatible current libraries are shown.
+7. The plugin selects the destination automatically: Movies go to **Sam Movies**, Anime goes to **Sam Anime**, and Shows go to **Sam TV Seris**.
 8. Select **Add to Library**.
 9. Wait for Jellyfin to scan the new `.strm` files. Metadata and artwork are then handled by Jellyfin's normal library providers.
 

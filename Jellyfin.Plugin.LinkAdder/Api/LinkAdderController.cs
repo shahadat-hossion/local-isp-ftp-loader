@@ -41,9 +41,8 @@ public sealed class LinkAdderController : ControllerBase
     [HttpPost("Add")]
     public async Task<ActionResult<AddResult>> Add([FromBody] AddRequest request, CancellationToken ct)
     {
-        var option = LibrariesForValidation().SingleOrDefault(x => x.Path.Equals(Path.GetFullPath(request.LibraryPath), StringComparison.OrdinalIgnoreCase));
-        if (option is null) return BadRequest(new { error = "Choose a current Jellyfin library." });
-        if (option.MediaType != request.MediaType && !(request.MediaType == "anime" && option.MediaType == "series")) return BadRequest(new { error = "The selected library type changed. Fetch again." });
+        var option = DefaultLibrary(request.MediaType, LibrariesForValidation());
+        if (option is null) return BadRequest(new { error = $"Create the required {DefaultLibraryName(request.MediaType)} Jellyfin library first." });
         var preview = await _service.PreviewAsync(request.Url, request.MediaType, request.Title, ct).ConfigureAwait(false);
         var result = _service.Write(preview, option.Path);
         _ = Task.Run(() => _library.ValidateMediaLibrary(new Progress<double>(), CancellationToken.None));
@@ -149,6 +148,19 @@ public sealed class LinkAdderController : ControllerBase
         .ToArray();
 
     private static MediaRequestView ToView(MediaAddRequest item) => new(item.Id, item.RequestedBy, item.Title, item.Url, item.MediaType, item.RequestedAtUtc);
+    private static LibraryOption? DefaultLibrary(string mediaType, IEnumerable<LibraryOption> libraries)
+    {
+        var expected = DefaultLibraryName(mediaType);
+        return libraries.FirstOrDefault(x => x.Name.Equals(expected, StringComparison.OrdinalIgnoreCase))
+            ?? (mediaType == "series" ? libraries.FirstOrDefault(x => x.Name.Equals("Sam TV Series", StringComparison.OrdinalIgnoreCase)) : null);
+    }
+    private static string DefaultLibraryName(string mediaType) => mediaType switch
+    {
+        "movie" => "Sam Movies",
+        "anime" => "Sam Anime",
+        "series" => "Sam TV Seris",
+        _ => throw new InvalidOperationException("Choose Movies, Shows, or Anime.")
+    };
     private static string NormalizeMediaType(string? value) => value?.Trim().ToLowerInvariant() switch
     {
         "movie" => "movie",
@@ -159,7 +171,7 @@ public sealed class LinkAdderController : ControllerBase
     private static string CollectionType(string? name, string? value)
     {
         var type = value?.ToLowerInvariant();
-        if (string.Equals(name, "Anime", StringComparison.OrdinalIgnoreCase)) return "anime";
+        if (name?.Contains("Anime", StringComparison.OrdinalIgnoreCase) == true) return "anime";
         if (type == "movies") return "movie";
         if (type == "tvshows") return "series";
         return string.Empty;
