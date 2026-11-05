@@ -54,7 +54,7 @@ public sealed partial class LinkAdderService
     private RemoteRoot[] RemoteRoots(string mediaType)
     {
         if(mediaType is not("movie" or "series" or "anime"))throw new InvalidOperationException("Choose Movies, Shows, or Anime.");
-        return _customSources.Where(x=>x.MediaType==mediaType).Select(x=>new RemoteRoot(x.Name,new Uri(x.Url),x.Username,x.Password)).ToArray();
+        return _customSources.Where(x=>x.MediaType==mediaType||(x.MediaType=="both"&&mediaType is "movie" or "series")).Select(x=>new RemoteRoot(x.Name,new Uri(x.Url),x.Username,x.Password)).ToArray();
     }
 
     private async Task<IReadOnlyList<Uri>> CrawlVideosAsync(Uri root,CancellationToken ct)

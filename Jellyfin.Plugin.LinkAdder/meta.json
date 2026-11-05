@@ -1,6 +1,6 @@
 {
   "category": "General",
-  "changelog": "Remove provider-specific sources, add FTP connection testing, and support any compatible Jellyfin destination library.",
+  "changelog": "Add a Movies and TV Series (Both) source type for shared ISP media servers.",
   "description": "Search user-configured local ISP media servers and add STRM entries from any signed-in Jellyfin device.",
   "guid": "9399b942-4b6d-46a7-9a5d-a01764f7ee6a",
   "name": "Local ISP FTP Loader",
@@ -8,7 +8,7 @@
   "owner": "shahadat-hossion",
   "targetAbi": "12.0.0.0",
   "timestamp": "2026-11-05T00:00:00.0000000Z",
-  "version": "2.4.0.0",
+  "version": "2.4.1.0",
   "status": "Active",
   "autoUpdate": false,
   "assemblies": []

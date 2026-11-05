@@ -80,7 +80,7 @@ public sealed class LinkAdderController : ControllerBase
     public ActionResult<CustomSourceView> AddSource([FromBody] CustomSourceRequest request)
     {
         var name = (request.Name ?? string.Empty).Trim();
-        var mediaType = NormalizeMediaType(request.MediaType);
+        var mediaType = NormalizeSourceMediaType(request.MediaType);
         var uri = ValidateLocalSource(request.Url);
         if (name.Length < 2) return BadRequest(new { error = "Enter a source name." });
         var source = new CustomSource
@@ -171,6 +171,14 @@ public sealed class LinkAdderController : ControllerBase
         "series" => "series",
         "anime" => "anime",
         _ => throw new InvalidOperationException("Choose Movies, Shows, or Anime.")
+    };
+    private static string NormalizeSourceMediaType(string? value) => value?.Trim().ToLowerInvariant() switch
+    {
+        "movie" => "movie",
+        "series" => "series",
+        "both" => "both",
+        "anime" => "anime",
+        _ => throw new InvalidOperationException("Choose Movies, TV Series, Both, or Anime.")
     };
     private static string CollectionType(string? name, string? value)
     {

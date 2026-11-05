@@ -56,7 +56,7 @@ Existing destination files are skipped instead of overwritten. Movies and series
 
 Open **Add Media**, then enter an FTP link title, media type, and private server URL. Supported source schemes are `http://`, `https://`, and `ftp://`. Add optional FTP credentials when required, then select **Test connection**. A successful test turns the button green; a failed test turns it red and displays the error. Select **Add source** to save it.
 
-Only loopback and private IPv4 ranges (`10.x`, `172.16-31.x`, and `192.168.x`) are accepted. Add separate sources for Movies, Shows, and Anime as needed. The plugin contains no provider-specific server addresses.
+Only loopback and private IPv4 ranges (`10.x`, `172.16-31.x`, and `192.168.x`) are accepted. Select **Movies & TV Series (Both)** when one server contains both categories; that source will be included in Movies and Shows searches. Anime remains a separate option. The plugin contains no provider-specific server addresses.
 
 ## What the plugin does not do
 
