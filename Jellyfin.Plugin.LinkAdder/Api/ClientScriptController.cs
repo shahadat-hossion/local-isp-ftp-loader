@@ -53,7 +53,7 @@ public sealed class ClientScriptController : ControllerBase
                 button.setAttribute('is', 'paper-icon-button-light');
                 button.title = 'Add Media';
                 button.setAttribute('aria-label', 'Add Media');
-                button.innerHTML = '<span class="material-icons add" aria-hidden="true">add</span>';
+                button.innerHTML = '<span class="material-icons add" aria-hidden="true"></span>';
                 button.addEventListener('click', openAddMedia);
                 return button;
             }
