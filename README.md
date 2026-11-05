@@ -77,6 +77,10 @@ Only loopback and private IPv4 ranges (`10.x`, `172.16-31.x`, and `192.168.x`) a
 - Confirm the correct media type is selected.
 - The remote folder may have been renamed, moved, or temporarily taken offline by the provider.
 
+### Movies & TV Series (Both) is missing
+
+The **Movies & TV Series (Both)** source type was added in version `2.4.1`. Open **Dashboard > Plugins > My Plugins** and confirm that Local ISP FTP Loader `2.4.1.0` or newer is installed. After updating, restart Jellyfin and hard-refresh the web interface with **Ctrl + F5**. Closing and reopening the Add Media page also clears an older cached page.
+
 ### Posters do not appear
 
 The plugin uses the JPG, JPEG, PNG, or WebP image found in each remote media folder. A folder without an image shows the fallback card. Poster loading also fails when the Jellyfin browser device cannot reach the private source address.
