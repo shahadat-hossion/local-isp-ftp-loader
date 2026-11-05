@@ -1,6 +1,6 @@
 <!DOCTYPE html><html><head><title>Add Media</title></head><body>
-<div id="SamOnlineMediaAddPage" data-role="page" class="page type-interior" data-require="emby-input,emby-button,emby-select"><div data-role="content"><div class="content-primary">
-<h2>Add Media</h2><p>Search Sam Online and your configured local media servers, then add a title directly to any compatible Jellyfin library.</p>
+<div id="LocalIspMediaAddPage" data-role="page" class="page type-interior" data-require="emby-input,emby-button,emby-select"><div data-role="content"><div class="content-primary">
+<h2>Add Media</h2><p>Search the built-in ISP indexes and your configured local media servers, then add a title directly to any compatible Jellyfin library.</p>
 <style>
 .samGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:1rem}.samCard{display:flex!important;flex-direction:column;padding:0!important;overflow:hidden;text-align:left!important;background:#18263d!important;border-radius:.5rem;min-height:250px}.samPoster{width:100%;aspect-ratio:2/3;object-fit:cover;background:#101a2a}.samCardBody{padding:.7rem;display:flex;flex-direction:column;gap:.35rem}.samCardTitle{font-weight:700;line-height:1.25}.samCardSource{font-size:.82rem;opacity:.7}.samPanel{margin-top:2rem;padding:1rem;border:1px solid rgba(255,255,255,.18);border-radius:.5rem}.samRow{display:grid;grid-template-columns:1fr 1fr;gap:1rem}.samSource{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.65rem 0;border-bottom:1px solid rgba(255,255,255,.12)}.samSourceText{min-width:0;overflow-wrap:anywhere}.samMuted{opacity:.7;font-size:.86rem}@media(max-width:600px){.samRow{grid-template-columns:1fr}.samGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem}.samCard{min-height:220px}}
 </style>
@@ -24,7 +24,7 @@
 <div id="sourceList" style="margin-top:1em"></div></details>
 
 <script type="text/javascript">(function(){
-const p=document.querySelector('#SamOnlineMediaAddPage'),q=s=>p.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const p=document.querySelector('#LocalIspMediaAddPage'),q=s=>p.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const call=async(path,method,body)=>{try{return await ApiClient.ajax({url:ApiClient.getUrl('Plugins/LinkAdder/'+path),type:method,dataType:method==='DELETE'?undefined:'json',contentType:'application/json',data:body?JSON.stringify(body):undefined})}catch(e){let detail='';try{let parsed=JSON.parse(e.responseText||'{}');detail=parsed.error||parsed.detail||''}catch(_){}throw Error(detail||(e.status===401?'Sign in to Jellyfin and refresh.':'Request failed'+(e.status?' ('+e.status+')':'')))}};
 const normalize=x=>({name:x.name??x.Name,path:x.path??x.Path,mediaType:x.mediaType??x.MediaType}),currentType=()=>q('#mediaType').value;
 const defaultName=()=>currentType()==='movie'?'Sam Movies':currentType()==='anime'?'Sam Anime':'Sam TV Seris';

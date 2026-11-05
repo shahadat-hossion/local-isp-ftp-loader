@@ -2,16 +2,16 @@
   {
     "category": "General",
     "guid": "9399b942-4b6d-46a7-9a5d-a01764f7ee6a",
-    "name": "Sam Online FTP Loader for Jellyfin",
-    "description": "Administrator-only search and STRM importer built specifically for the private Sam Online FTP/HTTP media indexes.",
+    "name": "Local ISP FTP Loader",
+    "description": "Search and STRM importer for private local ISP FTP/HTTP media indexes.",
     "owner": "shahadat-hossion",
-    "overview": "Search Sam Online media and add STRM entries to Jellyfin libraries.",
+    "overview": "Search local ISP media and add STRM entries to Jellyfin libraries.",
     "versions": [
       {
         "version": "2.2.1.0",
         "changelog": "Automatically route Movies to Sam Movies, Anime to Sam Anime, and Shows to Sam TV Seris.",
         "targetAbi": "12.0.0.0",
-        "sourceUrl": "https://github.com/shahadat-hossion/sam-online-ftp-loader-for-jellyfin/releases/download/v2.2.1/Sam-Online-FTP-Loader-2.2.1.zip",
+        "sourceUrl": "https://github.com/shahadat-hossion/local-isp-ftp-loader/releases/download/v2.2.1/Sam-Online-FTP-Loader-2.2.1.zip",
         "checksum": "2f79185148410d7f8797a4dd85312479",
         "timestamp": "2026-11-05T00:00:00Z"
       },
@@ -19,7 +19,7 @@
         "version": "2.2.0.0",
         "changelog": "Add Media main-menu page for every signed-in user, custom private HTTP/HTTPS/FTP sources, and all compatible Jellyfin libraries.",
         "targetAbi": "12.0.0.0",
-        "sourceUrl": "https://github.com/shahadat-hossion/sam-online-ftp-loader-for-jellyfin/releases/download/v2.2.0/Sam-Online-FTP-Loader-2.2.0.zip",
+        "sourceUrl": "https://github.com/shahadat-hossion/local-isp-ftp-loader/releases/download/v2.2.0/Sam-Online-FTP-Loader-2.2.0.zip",
         "checksum": "3ecb86c7ff41aaac19d1cd2b6347feb0",
         "timestamp": "2026-11-05T00:00:00Z"
       },
@@ -27,7 +27,7 @@
         "version": "2.1.1.0",
         "changelog": "Poster-card search results and complete Movies, Shows, and Anime directory mapping.",
         "targetAbi": "12.0.0.0",
-        "sourceUrl": "https://github.com/shahadat-hossion/sam-online-ftp-loader-for-jellyfin/releases/download/v2.1.1/Sam-Online-FTP-Loader-2.1.1.zip",
+        "sourceUrl": "https://github.com/shahadat-hossion/local-isp-ftp-loader/releases/download/v2.1.1/Sam-Online-FTP-Loader-2.1.1.zip",
         "checksum": "b686042cdcc312e28c3c8b18c2fa1b93",
         "timestamp": "2026-11-05T00:00:00Z"
       }

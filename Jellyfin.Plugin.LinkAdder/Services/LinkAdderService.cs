@@ -11,7 +11,7 @@ public sealed partial class LinkAdderService
     private readonly HttpClient _http;
     private readonly CustomSource[] _customSources;
     private sealed record RemoteRoot(string Name, Uri Url, string Username = "", string Password = "");
-    public LinkAdderService(HttpClient http, IEnumerable<CustomSource>? customSources = null) { _http=http; _http.Timeout=TimeSpan.FromSeconds(20); _http.DefaultRequestHeaders.UserAgent.ParseAdd("Sam-Online-FTP-Loader/2.2"); _customSources=(customSources??[]).ToArray(); }
+    public LinkAdderService(HttpClient http, IEnumerable<CustomSource>? customSources = null) { _http=http; _http.Timeout=TimeSpan.FromSeconds(20); _http.DefaultRequestHeaders.UserAgent.ParseAdd("Local-ISP-FTP-Loader/2.3"); _customSources=(customSources??[]).ToArray(); }
 
     public async Task<IReadOnlyList<RemoteSearchResult>> SearchRemoteAsync(string mediaType,string query,CancellationToken ct)
     {

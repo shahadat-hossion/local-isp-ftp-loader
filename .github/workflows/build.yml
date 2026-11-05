@@ -20,7 +20,7 @@ jobs:
       - name: Upload package artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Sam-Online-FTP-Loader
+          name: Local-ISP-FTP-Loader
           path: |
-            dist/Sam-Online-FTP-Loader-*.zip
-            dist/Sam-Online-FTP-Loader-*.zip.md5
+            dist/Local-ISP-FTP-Loader-*.zip
+            dist/Local-ISP-FTP-Loader-*.zip.md5

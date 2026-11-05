@@ -7,7 +7,7 @@ $projectFile = Join-Path $projectRoot 'Jellyfin.Plugin.LinkAdder\Jellyfin.Plugin
 $publishDirectory = Join-Path $projectRoot 'dist\LinkAdder'
 $version = ([xml](Get-Content -Raw -LiteralPath $projectFile)).Project.PropertyGroup.Version
 $packageVersion = $version -replace '\.0$', ''
-$packagePath = Join-Path $projectRoot "dist\Sam-Online-FTP-Loader-$packageVersion.zip"
+$packagePath = Join-Path $projectRoot "dist\Local-ISP-FTP-Loader-$packageVersion.zip"
 
 if (Test-Path -LiteralPath $publishDirectory) {
     Remove-Item -LiteralPath $publishDirectory -Recurse -Force
