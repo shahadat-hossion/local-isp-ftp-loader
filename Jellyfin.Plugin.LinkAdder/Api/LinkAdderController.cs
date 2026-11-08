@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using Jellyfin.Plugin.LinkAdder.Configuration;
 using Jellyfin.Plugin.LinkAdder.Models;
 using Jellyfin.Plugin.LinkAdder.Services;
+using MediaBrowser.Common.Api;
 using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -25,6 +26,7 @@ public sealed class LinkAdderController : ControllerBase
     }
 
     [HttpGet("CanManage")]
+    [Authorize(Policy = Policies.RequiresElevation)]
     public ActionResult CanManage() => Ok(new { canManage = true });
 
     [HttpGet("Libraries")]
@@ -52,6 +54,7 @@ public sealed class LinkAdderController : ControllerBase
     }
 
     [HttpPost("Sources/Test")]
+    [Authorize(Policy = Policies.RequiresElevation)]
     public async Task<ActionResult<TestSourceResult>> TestSource([FromBody] TestSourceRequest request, CancellationToken ct)
     {
         ValidateLocalSource(request.Url);
@@ -67,6 +70,7 @@ public sealed class LinkAdderController : ControllerBase
     }
 
     [HttpGet("Sources")]
+    [Authorize(Policy = Policies.RequiresElevation)]
     public ActionResult<IReadOnlyList<CustomSourceView>> Sources()
     {
         var items = (Plugin.Instance?.Configuration.CustomSources ?? [])
@@ -77,6 +81,7 @@ public sealed class LinkAdderController : ControllerBase
     }
 
     [HttpPost("Sources/TestAll")]
+    [Authorize(Policy = Policies.RequiresElevation)]
     public async Task<ActionResult<IReadOnlyList<SavedSourceTestResult>>> TestAllSources(CancellationToken ct)
     {
         var sources = (Plugin.Instance?.Configuration.CustomSources ?? []).ToArray();
@@ -96,6 +101,7 @@ public sealed class LinkAdderController : ControllerBase
     }
 
     [HttpPost("Sources")]
+    [Authorize(Policy = Policies.RequiresElevation)]
     public ActionResult<CustomSourceView> AddSource([FromBody] CustomSourceRequest request)
     {
         var name = (request.Name ?? string.Empty).Trim();
@@ -122,6 +128,7 @@ public sealed class LinkAdderController : ControllerBase
     }
 
     [HttpDelete("Sources/{id}")]
+    [Authorize(Policy = Policies.RequiresElevation)]
     public ActionResult DeleteSource(string id)
     {
         lock (ConfigurationLock)
