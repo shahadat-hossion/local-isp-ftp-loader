@@ -3,8 +3,12 @@ name: Build plugin
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
     branches: [main]
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -24,3 +28,33 @@ jobs:
           path: |
             dist/Local-ISP-FTP-Loader-*.zip
             dist/Local-ISP-FTP-Loader-*.zip.md5
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/Local-ISP-FTP-Loader-*.zip
+            dist/Local-ISP-FTP-Loader-*.zip.md5
+      - name: Publish Jellyfin catalog entry
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $project = [xml](Get-Content -Raw -LiteralPath 'Jellyfin.Plugin.LinkAdder\Jellyfin.Plugin.LinkAdder.csproj')
+          $version = [string]$project.Project.PropertyGroup.Version
+          $releaseVersion = $version -replace '\.0$', ''
+          $package = Get-Item -LiteralPath "dist\Local-ISP-FTP-Loader-$releaseVersion.zip"
+          $checksum = (Get-FileHash -LiteralPath $package.FullName -Algorithm MD5).Hash.ToLowerInvariant()
+          $timestamp = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+          $sourceUrl = "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/$($package.Name)"
+          git fetch origin main
+          git checkout main
+          .\scripts\Update-Manifest.ps1 -Version $version -Checksum $checksum -Timestamp $timestamp -SourceUrl $sourceUrl
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add manifest.json
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m "Publish $version catalog entry"
+            git push origin main
+          }

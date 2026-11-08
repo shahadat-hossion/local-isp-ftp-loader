@@ -1,14 +1,14 @@
 {
   "category": "General",
-  "changelog": "Add a Movies and TV Series (Both) source type for shared ISP media servers.",
+  "changelog": "Move source management to a collapsed bottom panel, add Test all servers status checks, and add the new plugin logo.",
   "description": "Search user-configured local ISP media servers and add STRM entries from any signed-in Jellyfin device.",
   "guid": "9399b942-4b6d-46a7-9a5d-a01764f7ee6a",
   "name": "Local ISP FTP Loader",
   "overview": "Search local ISP media and create Jellyfin STRM entries.",
   "owner": "shahadat-hossion",
   "targetAbi": "12.0.0.0",
-  "timestamp": "2026-11-05T00:00:00.0000000Z",
-  "version": "2.4.1.0",
+  "timestamp": "2026-11-08T17:28:31.0000000Z",
+  "version": "2.4.2.0",
   "status": "Active",
   "autoUpdate": false,
   "assemblies": []
