@@ -76,6 +76,25 @@ public sealed class LinkAdderController : ControllerBase
         return Ok(items);
     }
 
+    [HttpPost("Sources/TestAll")]
+    public async Task<ActionResult<IReadOnlyList<SavedSourceTestResult>>> TestAllSources(CancellationToken ct)
+    {
+        var sources = (Plugin.Instance?.Configuration.CustomSources ?? []).ToArray();
+        var tests = sources.Select(async source =>
+        {
+            try
+            {
+                var entries = await _service.TestConnectionAsync(source.Url, source.Username, source.Password, ct).ConfigureAwait(false);
+                return new SavedSourceTestResult(source.Id, true, entries, $"Connection successful. Found {entries} entries.");
+            }
+            catch (Exception ex) when (ex is HttpRequestException or WebException or IOException or UnauthorizedAccessException or TaskCanceledException)
+            {
+                return new SavedSourceTestResult(source.Id, false, 0, $"Connection failed: {ex.Message}");
+            }
+        });
+        return Ok(await Task.WhenAll(tests).ConfigureAwait(false));
+    }
+
     [HttpPost("Sources")]
     public ActionResult<CustomSourceView> AddSource([FromBody] CustomSourceRequest request)
     {

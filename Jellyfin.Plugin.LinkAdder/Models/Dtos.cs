@@ -10,6 +10,7 @@ public sealed record AddResult(IReadOnlyList<string> Created, IReadOnlyList<stri
 public sealed record CustomSourceRequest(string Name, string Url, string MediaType, string? Username, string? Password);
 public sealed record TestSourceRequest(string Url, string? Username, string? Password);
 public sealed record TestSourceResult(bool Success, int Entries, string Message);
+public sealed record SavedSourceTestResult(string Id, bool Success, int Entries, string Message);
 public sealed record CustomSourceView(string Id, string Name, string Url, string MediaType, bool HasCredentials);
 public sealed record SubmitMediaRequest(string Url, string MediaType, string? Title);
 public sealed record MediaRequestView(string Id, string RequestedBy, string Title, string Url, string MediaType, DateTime RequestedAtUtc);
