@@ -14,3 +14,12 @@ public sealed record SavedSourceTestResult(string Id, bool Success, int Entries,
 public sealed record CustomSourceView(string Id, string Name, string Url, string MediaType, bool HasCredentials);
 public sealed record SubmitMediaRequest(string Url, string MediaType, string? Title);
 public sealed record MediaRequestView(string Id, string RequestedBy, string Title, string Url, string MediaType, DateTime RequestedAtUtc);
+public sealed record AutomationSettingsRequest(bool Enabled, bool PreviewOnly, string? TmdbCredential, bool TrendingMovies, bool NewMovies, bool TopMovies, bool TrendingSeries, bool NewSeries, bool TopSeries, bool TrendingAnime, int IntervalHours, int MaxPerCategory, double MinimumRating, int MinimumVotes, string? MovieLibraryPath, string? SeriesLibraryPath, string? AnimeLibraryPath);
+public sealed record AutomationSettingsView(bool Enabled, bool PreviewOnly, bool HasTmdbCredential, bool TrendingMovies, bool NewMovies, bool TopMovies, bool TrendingSeries, bool NewSeries, bool TopSeries, bool TrendingAnime, int IntervalHours, int MaxPerCategory, double MinimumRating, int MinimumVotes, string MovieLibraryPath, string SeriesLibraryPath, string AnimeLibraryPath, DateTime? LastRunUtc, DateTime? NextRunUtc);
+public sealed record DiscoveryTitle(string ContentId, string Provider, string Category, string MediaType, string Title, string OriginalTitle, int? Year, double Rating, int Votes, string PosterUrl);
+public sealed record AddDiscoveryTitleRequest(string ContentId, string Provider, string Category, string MediaType, string Title, string OriginalTitle, int? Year, double Rating, int Votes, string PosterUrl, string? SelectedUrl);
+public sealed record AddDiscoveryTitleResult(AutomationCandidate Result, IReadOnlyList<RemoteSearchResult> Matches);
+public sealed record AutomationCandidate(string ContentId, string Category, string MediaType, string Title, int? Year, double Rating, int Votes, string PosterUrl, string Status, string Message, string? SourceUrl, string? SourceName);
+public sealed record AutomationRunResult(int Discovered, int Matched, int Added, int Skipped, int Failed, bool PreviewOnly, IReadOnlyList<AutomationCandidate> Items);
+public sealed record AutomationHistoryView(DateTime TimestampUtc, string ContentId, string Title, string MediaType, string Status, string Message);
+public sealed record AutomationExclusionView(string ContentId, string Title, string MediaType, DateTime? AddedAtUtc);

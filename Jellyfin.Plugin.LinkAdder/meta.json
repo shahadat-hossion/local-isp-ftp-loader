@@ -1,14 +1,14 @@
 {
   "category": "General",
-  "changelog": "Restrict server-link visibility and all source-management operations to Jellyfin administrators.",
+  "changelog": "Add animated loading indicators, skeleton cards, and reliable busy states to discovery and automation actions.",
   "description": "Search user-configured local ISP media servers and add STRM entries from any signed-in Jellyfin device.",
   "guid": "9399b942-4b6d-46a7-9a5d-a01764f7ee6a",
   "name": "Local ISP FTP Loader",
   "overview": "Search local ISP media and create Jellyfin STRM entries.",
   "owner": "shahadat-hossion",
   "targetAbi": "12.0.0.0",
-  "timestamp": "2026-11-08T17:45:00.0000000Z",
-  "version": "2.4.3.0",
+  "timestamp": "2026-11-08T18:00:00.0000000Z",
+  "version": "2.5.2.0",
   "status": "Active",
   "autoUpdate": false,
   "assemblies": []
