@@ -1,5 +1,9 @@
 # Local ISP FTP Loader
 
+<p align="center">
+  <img src="assets/local-isp-ftp-loader-logo.png" alt="Local ISP FTP Loader logo" width="240">
+</p>
+
 Local ISP FTP Loader is a Jellyfin 12 plugin for private FTP/HTTP media indexes provided by a local ISP or hosted on another private local server. Every signed-in Jellyfin user can search and add a movie, TV/web series, or anime title from a PC, TV, or phone without manually browsing the server or copying a folder link.
 
 The plugin searches user-configured private sources, displays matching titles in a poster grid, discovers the playable files inside the selected folder, and creates correctly organized `.strm` files in an existing Jellyfin library. Jellyfin reads each `.strm` file as a pointer to the original remote video; the plugin does not download or duplicate the video itself.

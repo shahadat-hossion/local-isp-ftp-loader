@@ -4,6 +4,7 @@
     "guid": "9399b942-4b6d-46a7-9a5d-a01764f7ee6a",
     "name": "Local ISP FTP Loader",
     "description": "Search and STRM importer for private local ISP FTP/HTTP media indexes.",
+    "imageUrl": "https://raw.githubusercontent.com/shahadat-hossion/local-isp-ftp-loader/main/assets/local-isp-ftp-loader-logo.png",
     "owner": "shahadat-hossion",
     "overview": "Search local ISP media and add STRM entries to Jellyfin libraries.",
     "versions": [
