@@ -21,6 +21,13 @@ public sealed partial class AutomationService
         _discovery = discovery;
     }
 
+    public async Task WarmSearchIndexesAsync(CancellationToken ct)
+    {
+        var configuration = Plugin.Instance?.Configuration ?? throw new InvalidOperationException("Plugin configuration is unavailable.");
+        var service = new LinkAdderService(_clients.CreateClient(), configuration.CustomSources);
+        await service.WarmSearchIndexesAsync(ct).ConfigureAwait(false);
+    }
+
     public async Task<AddDiscoveryTitleResult> AddTitleAsync(DiscoveryTitle title, string? selectedUrl, CancellationToken ct)
     {
         if (!await RunLock.WaitAsync(0, ct).ConfigureAwait(false))
@@ -179,10 +186,9 @@ public sealed partial class AutomationService
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
-        var results = new List<RemoteSearchResult>();
-        foreach (var alias in aliases)
-            results.AddRange(await service.SearchRemoteAsync(title.MediaType, alias, ct).ConfigureAwait(false));
-        return results.GroupBy(x => x.Url, StringComparer.OrdinalIgnoreCase).Select(x => x.First())
+        var searches = aliases.Select(alias => service.SearchRemoteAsync(title.MediaType, alias, ct, includePosters: false));
+        var results = await Task.WhenAll(searches).ConfigureAwait(false);
+        return results.SelectMany(x => x).GroupBy(x => x.Url, StringComparer.OrdinalIgnoreCase).Select(x => x.First())
             .Where(x => IsTitleMatch(x.Name, aliases))
             .OrderByDescending(x => QualityRank(x.Name + " " + x.Url))
             .ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase)

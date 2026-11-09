@@ -1,4 +1,5 @@
 using System.Net;
+using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using Jellyfin.Plugin.LinkAdder.Models;
 using System.Net.Sockets;
@@ -7,15 +8,49 @@ using Jellyfin.Plugin.LinkAdder.Configuration;
 namespace Jellyfin.Plugin.LinkAdder.Services;
 public sealed partial class LinkAdderService
 {
+    private sealed record LinkCacheEntry(DateTime ExpiresUtc, Lazy<Task<IReadOnlyList<Uri>>> Loader);
+    private sealed record IndexedTitle(string Name, string Url, string Source, RemoteRoot Root);
+    private sealed record SearchIndexEntry(DateTime ExpiresUtc, Lazy<Task<IReadOnlyList<IndexedTitle>>> Loader);
+    private static readonly ConcurrentDictionary<string, LinkCacheEntry> SearchLinkCache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<string, SearchIndexEntry> SearchIndexes = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly TimeSpan SearchCacheDuration = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan SearchIndexDuration = TimeSpan.FromMinutes(10);
     private static readonly HashSet<string> VideoExtensions = new(StringComparer.OrdinalIgnoreCase) { ".mkv", ".mp4", ".avi", ".mov", ".m4v", ".ts", ".m2ts", ".webm", ".wmv", ".mpg", ".mpeg" };
     private readonly HttpClient _http;
     private readonly CustomSource[] _customSources;
     private sealed record RemoteRoot(string Name, Uri Url, string Username = "", string Password = "");
     public LinkAdderService(HttpClient http, IEnumerable<CustomSource>? customSources = null) { _http=http; _http.Timeout=TimeSpan.FromSeconds(20); _http.DefaultRequestHeaders.UserAgent.ParseAdd("Local-ISP-FTP-Loader/2.3"); _customSources=(customSources??[]).ToArray(); }
 
-    public async Task<IReadOnlyList<RemoteSearchResult>> SearchRemoteAsync(string mediaType,string query,CancellationToken ct)
+    public async Task<IReadOnlyList<RemoteSearchResult>> SearchRemoteAsync(string mediaType,string query,CancellationToken ct,bool includePosters=true)
     {
-        query=(query??string.Empty).Trim();if(query.Length<2)throw new InvalidOperationException("Enter at least 2 characters.");var roots=RemoteRoots(mediaType);if(roots.Length==0)throw new InvalidOperationException("Add a local ISP media source for this media type first.");var tasks=roots.Select(root=>SearchRootAsync(root,query,ct));var groups=await Task.WhenAll(tasks).ConfigureAwait(false);return groups.SelectMany(x=>x).GroupBy(x=>x.Url,StringComparer.OrdinalIgnoreCase).Select(x=>x.First()).OrderBy(x=>x.Name.StartsWith(query,StringComparison.OrdinalIgnoreCase)?0:1).ThenBy(x=>x.Name,StringComparer.OrdinalIgnoreCase).Take(100).ToArray();
+        query=(query??string.Empty).Trim();
+        if(query.Length<2)throw new InvalidOperationException("Enter at least 2 characters.");
+        var roots=RemoteRoots(mediaType);
+        if(roots.Length==0)throw new InvalidOperationException("Add a local ISP media source for this media type first.");
+        var normalizedQuery=NormalizeSearchText(query);
+        var queryTokens=normalizedQuery.Split(' ',StringSplitOptions.RemoveEmptyEntries|StringSplitOptions.TrimEntries);
+        var index=await GetSearchIndexAsync(mediaType,roots,ct).ConfigureAwait(false);
+        var matches=index.Select(item=>new { Item=item, Score=SearchScore(item.Name,normalizedQuery,queryTokens) })
+            .Where(x=>x.Score>0)
+            .OrderByDescending(x=>x.Score)
+            .ThenBy(x=>x.Item.Name,StringComparer.OrdinalIgnoreCase)
+            .Take(100)
+            .Select(x=>x.Item)
+            .ToArray();
+        if(!includePosters)return matches.Select(item=>new RemoteSearchResult(item.Name,item.Url,item.Source,string.Empty)).ToArray();
+        return await AddPostersAsync(matches,ct).ConfigureAwait(false);
+    }
+
+    public async Task WarmSearchIndexesAsync(CancellationToken ct)
+    {
+        var warmups=new[]{"movie","series","anime"}.Select(async mediaType=>
+        {
+            var roots=RemoteRoots(mediaType);
+            if(roots.Length==0)return;
+            try{await GetSearchIndexAsync(mediaType,roots,ct).ConfigureAwait(false);}
+            catch when(!ct.IsCancellationRequested){}
+        });
+        await Task.WhenAll(warmups).ConfigureAwait(false);
     }
 
     public async Task<int> TestConnectionAsync(string sourceUrl,string? username,string? password,CancellationToken ct)
@@ -37,16 +72,109 @@ public sealed partial class LinkAdderService
         return new(created,skipped,"Library scan requested.");
     }
 
-    private async Task<IReadOnlyList<RemoteSearchResult>> SearchRootAsync(RemoteRoot root,string query,CancellationToken ct)
+    private async Task<IReadOnlyList<IndexedTitle>> GetSearchIndexAsync(string mediaType,RemoteRoot[] roots,CancellationToken ct)
     {
-        var results=new List<RemoteSearchResult>();var visited=new HashSet<string>(StringComparer.OrdinalIgnoreCase);var queue=new Queue<(Uri Url,int Depth)>();queue.Enqueue((root.Url,0));
-        try{while(queue.Count>0&&visited.Count<300){var(page,depth)=queue.Dequeue();if(!visited.Add(page.AbsoluteUri))continue;foreach(var link in await ListLinksAsync(page,root,ct).ConfigureAwait(false)){if(!IsWithin(root.Url,link)||!link.AbsolutePath.EndsWith('/'))continue;var name=WebUtility.UrlDecode(Path.GetFileName(link.AbsolutePath.TrimEnd('/')));if(name is "" or "." or "..")continue;var structural=IsStructuralFolder(name);if(name.Contains(query,StringComparison.OrdinalIgnoreCase)&&!structural)results.Add(new(name,link.AbsoluteUri,root.Name,await FindPosterAsync(link,root,ct).ConfigureAwait(false)));if(depth<2&&structural)queue.Enqueue((link,depth+1));}}}catch(WebException){}catch(HttpRequestException){}catch(TaskCanceledException) when(!ct.IsCancellationRequested){}
+        var signature=string.Join('|',roots.OrderBy(x=>x.Url.AbsoluteUri,StringComparer.OrdinalIgnoreCase).Select(x=>$"{x.Url.AbsoluteUri}\u001f{x.Username}"));
+        var key=$"{mediaType}\u001e{signature}";
+        while(true)
+        {
+            var now=DateTime.UtcNow;
+            if(SearchIndexes.TryGetValue(key,out var current)&&current.ExpiresUtc>now)
+            {
+                try{return await current.Loader.Value.WaitAsync(ct).ConfigureAwait(false);}
+                catch when(!ct.IsCancellationRequested){SearchIndexes.TryRemove(new KeyValuePair<string,SearchIndexEntry>(key,current));throw;}
+            }
+            var replacement=new SearchIndexEntry(now.Add(SearchIndexDuration),new Lazy<Task<IReadOnlyList<IndexedTitle>>>(async()=>
+            {
+                var groups=await Task.WhenAll(roots.Select(root=>IndexRootWithTimeoutAsync(root,CancellationToken.None))).ConfigureAwait(false);
+                return groups.SelectMany(x=>x).GroupBy(x=>x.Url,StringComparer.OrdinalIgnoreCase).Select(x=>x.First()).ToArray();
+            },LazyThreadSafetyMode.ExecutionAndPublication));
+            var installed=current is null?SearchIndexes.TryAdd(key,replacement):SearchIndexes.TryUpdate(key,replacement,current);
+            if(!installed)continue;
+            try{return await replacement.Loader.Value.WaitAsync(ct).ConfigureAwait(false);}
+            catch when(!ct.IsCancellationRequested){SearchIndexes.TryRemove(new KeyValuePair<string,SearchIndexEntry>(key,replacement));throw;}
+        }
+    }
+
+    private async Task<IReadOnlyList<IndexedTitle>> IndexRootWithTimeoutAsync(RemoteRoot root,CancellationToken ct)
+    {
+        using var timeout=CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromSeconds(20));
+        try{return await IndexRootAsync(root,timeout.Token).ConfigureAwait(false);}
+        catch(TaskCanceledException) when(!ct.IsCancellationRequested){return [];}
+    }
+
+    private async Task<IReadOnlyList<IndexedTitle>> IndexRootAsync(RemoteRoot root,CancellationToken ct)
+    {
+        var results=new List<IndexedTitle>();
+        var visited=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var pages=new[]{root.Url};
+        using var concurrency=new SemaphoreSlim(8,8);
+        for(var depth=0;depth<=2&&pages.Length>0&&visited.Count<300;depth++)
+        {
+            var remaining=300-visited.Count;
+            var current=pages.Where(page=>visited.Add(page.AbsoluteUri)).Take(remaining).ToArray();
+            var loads=current.Select(async page=>
+            {
+                await concurrency.WaitAsync(ct).ConfigureAwait(false);
+                try{return (Page:page,Links:await ListSearchLinksAsync(page,root,ct).ConfigureAwait(false));}
+                catch(Exception ex) when(ex is WebException or HttpRequestException or TaskCanceledException&&!ct.IsCancellationRequested){return (Page:page,Links:(IReadOnlyList<Uri>)[]);}
+                finally{concurrency.Release();}
+            });
+            var loaded=await Task.WhenAll(loads).ConfigureAwait(false);
+            var next=new List<Uri>();
+            foreach(var group in loaded)
+            {
+                foreach(var link in group.Links)
+                {
+                    if(!IsWithin(root.Url,link)||!link.AbsolutePath.EndsWith('/'))continue;
+                    var name=WebUtility.UrlDecode(Path.GetFileName(link.AbsolutePath.TrimEnd('/')));
+                    if(name is "" or "." or "..")continue;
+                    var structural=IsStructuralFolder(name);
+                    if(!structural)results.Add(new(name,link.AbsoluteUri,root.Name,root));
+                    if(depth<2&&structural)next.Add(link);
+                }
+            }
+            pages=next.DistinctBy(x=>x.AbsoluteUri,StringComparer.OrdinalIgnoreCase).ToArray();
+        }
         return results;
+    }
+
+    private async Task<IReadOnlyList<RemoteSearchResult>> AddPostersAsync(IReadOnlyList<IndexedTitle> matches,CancellationToken ct)
+    {
+        using var concurrency=new SemaphoreSlim(8,8);
+        var tasks=matches.Select(async (item,index)=>
+        {
+            if(index>=24)return new RemoteSearchResult(item.Name,item.Url,item.Source,string.Empty);
+            await concurrency.WaitAsync(ct).ConfigureAwait(false);
+            try{return new RemoteSearchResult(item.Name,item.Url,item.Source,await FindPosterAsync(new Uri(item.Url),item.Root,ct).ConfigureAwait(false));}
+            finally{concurrency.Release();}
+        });
+        return await Task.WhenAll(tasks).ConfigureAwait(false);
+    }
+
+    private static int SearchScore(string name,string normalizedQuery,IReadOnlyList<string> queryTokens)
+    {
+        var normalizedName=NormalizeSearchText(name);
+        if(normalizedName.Equals(normalizedQuery,StringComparison.OrdinalIgnoreCase))return 1000;
+        if(normalizedName.StartsWith(normalizedQuery+" ",StringComparison.OrdinalIgnoreCase))return 900;
+        if(normalizedName.Contains(" "+normalizedQuery+" ",StringComparison.OrdinalIgnoreCase)||normalizedName.EndsWith(" "+normalizedQuery,StringComparison.OrdinalIgnoreCase))return 800;
+        var nameTokens=normalizedName.Split(' ',StringSplitOptions.RemoveEmptyEntries|StringSplitOptions.TrimEntries).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if(queryTokens.Count>0&&queryTokens.All(nameTokens.Contains))return 600+queryTokens.Count;
+        if(normalizedName.Contains(normalizedQuery,StringComparison.OrdinalIgnoreCase))return 400;
+        return 0;
+    }
+
+    private static string NormalizeSearchText(string value)
+    {
+        var text=WebUtility.UrlDecode(value).ToLowerInvariant();
+        text=SearchPunctuationRegex().Replace(text," ");
+        return SearchSpaceRegex().Replace(text," ").Trim();
     }
 
     private async Task<string> FindPosterAsync(Uri folder,RemoteRoot root,CancellationToken ct)
     {
-        try{var image=(await ListLinksAsync(folder,root,ct).ConfigureAwait(false)).FirstOrDefault(link=>!link.AbsolutePath.StartsWith("/_h5ai/",StringComparison.OrdinalIgnoreCase)&&PosterRegex().IsMatch(link.AbsolutePath));return image?.Scheme is "http" or "https"?image.AbsoluteUri:string.Empty;}catch(WebException){return string.Empty;}catch(HttpRequestException){return string.Empty;}catch(TaskCanceledException) when(!ct.IsCancellationRequested){return string.Empty;}
+        try{var image=(await ListSearchLinksAsync(folder,root,ct).ConfigureAwait(false)).FirstOrDefault(link=>!link.AbsolutePath.StartsWith("/_h5ai/",StringComparison.OrdinalIgnoreCase)&&PosterRegex().IsMatch(link.AbsolutePath));return image?.Scheme is "http" or "https"?image.AbsoluteUri:string.Empty;}catch(WebException){return string.Empty;}catch(HttpRequestException){return string.Empty;}catch(TaskCanceledException) when(!ct.IsCancellationRequested){return string.Empty;}
     }
 
     private static bool IsStructuralFolder(string name)=>StructuralRegex().IsMatch(name)||name.Contains('—')||name.Contains("Before",StringComparison.OrdinalIgnoreCase)||name.Contains("Series",StringComparison.OrdinalIgnoreCase)&&name.Length<40;
@@ -80,6 +208,24 @@ public sealed partial class LinkAdderService
         using var response=(FtpWebResponse)await request.GetResponseAsync().WaitAsync(ct).ConfigureAwait(false);using var reader=new StreamReader(response.GetResponseStream());var links=new List<Uri>();while(await reader.ReadLineAsync(ct).ConfigureAwait(false) is { } raw){var name=raw.Trim().Trim('/');if(name is "" or "." or "..")continue;name=Path.GetFileName(name.Replace('\\','/'));var isFile=VideoExtensions.Contains(Path.GetExtension(name))||PosterRegex().IsMatch(name);var escaped=Uri.EscapeDataString(name).Replace("%2F","/",StringComparison.OrdinalIgnoreCase);links.Add(new Uri(folder,escaped+(isFile?string.Empty:"/")));}return links;
 #pragma warning restore SYSLIB0014
     }
+    private async Task<IReadOnlyList<Uri>> ListSearchLinksAsync(Uri folder,RemoteRoot root,CancellationToken ct)
+    {
+        var key=$"{root.Username}\n{folder.AbsoluteUri}";
+        while(true)
+        {
+            var now=DateTime.UtcNow;
+            if(SearchLinkCache.TryGetValue(key,out var current)&&current.ExpiresUtc>now)
+            {
+                try{return await current.Loader.Value.WaitAsync(ct).ConfigureAwait(false);}
+                catch when(!ct.IsCancellationRequested){SearchLinkCache.TryRemove(new KeyValuePair<string,LinkCacheEntry>(key,current));throw;}
+            }
+            var replacement=new LinkCacheEntry(now.Add(SearchCacheDuration),new Lazy<Task<IReadOnlyList<Uri>>>(()=>ListLinksAsync(folder,root,CancellationToken.None),LazyThreadSafetyMode.ExecutionAndPublication));
+            var installed=current is null?SearchLinkCache.TryAdd(key,replacement):SearchLinkCache.TryUpdate(key,replacement,current);
+            if(!installed)continue;
+            try{return await replacement.Loader.Value.WaitAsync(ct).ConfigureAwait(false);}
+            catch when(!ct.IsCancellationRequested){SearchLinkCache.TryRemove(new KeyValuePair<string,LinkCacheEntry>(key,replacement));throw;}
+        }
+    }
     private static bool IsPrivate(IPAddress address){if(IPAddress.IsLoopback(address))return true;if(address.AddressFamily!=AddressFamily.InterNetwork)return false;var b=address.GetAddressBytes();return b[0]==10||(b[0]==172&&b[1]>=16&&b[1]<=31)||(b[0]==192&&b[1]==168);}
     private static IEnumerable<Uri> ExtractLinks(Uri page,string body){foreach(Match m in HrefRegex().Matches(body)){var href=WebUtility.HtmlDecode(m.Groups[1].Value);if(Uri.TryCreate(page,href,out var link)&&(link.Scheme=="http"||link.Scheme=="https"))yield return new UriBuilder(link){Fragment=string.Empty}.Uri;}}
     private static bool IsWithin(Uri root,Uri value)=>value.Scheme==root.Scheme&&value.Host.Equals(root.Host,StringComparison.OrdinalIgnoreCase)&&value.Port==root.Port&&value.AbsolutePath.StartsWith(root.AbsolutePath.EndsWith('/')?root.AbsolutePath:root.AbsolutePath+'/',StringComparison.OrdinalIgnoreCase);
@@ -99,4 +245,6 @@ public sealed partial class LinkAdderService
     [GeneratedRegex("\\s+")]private static partial Regex SpaceRegex();
     [GeneratedRegex("^(?:\\(?\\d{4}\\)?|\\d{4}\\s*&|TV[- ]?Series|Anime[- ]?TV)",RegexOptions.IgnoreCase)]private static partial Regex StructuralRegex();
     [GeneratedRegex("\\.(?:jpe?g|png|webp)$",RegexOptions.IgnoreCase)]private static partial Regex PosterRegex();
+    [GeneratedRegex(@"[^\p{L}\p{N}]+") ]private static partial Regex SearchPunctuationRegex();
+    [GeneratedRegex(@"\s+") ]private static partial Regex SearchSpaceRegex();
 }

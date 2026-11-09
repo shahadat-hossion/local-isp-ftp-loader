@@ -16,7 +16,17 @@ public sealed class AutomationBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await Task.Delay(TimeSpan.FromMinutes(2), stoppingToken).ConfigureAwait(false);
+        await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken).ConfigureAwait(false);
+        try
+        {
+            await _automation.WarmSearchIndexesAsync(stoppingToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Local ISP FTP Loader search-index warmup failed.");
+        }
+        await Task.Delay(TimeSpan.FromSeconds(110), stoppingToken).ConfigureAwait(false);
         while (!stoppingToken.IsCancellationRequested)
         {
             try
