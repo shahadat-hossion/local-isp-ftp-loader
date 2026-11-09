@@ -9,6 +9,14 @@
     "overview": "Search local ISP media and add STRM entries to Jellyfin libraries.",
     "versions": [
       {
+        "version": "2.5.2.0",
+        "changelog": "Add TMDb and AniList discovery, scheduled automation, per-title library actions with dynamic match selection and quality ranking, indexed private-source search, loading animations, activity history, and exclusion handling.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/shahadat-hossion/local-isp-ftp-loader/releases/download/v2.5.2/Local-ISP-FTP-Loader-2.5.2.zip",
+        "checksum": "6177a3b91c553ddb72721cf21c0f4d24",
+        "timestamp": "2026-11-09T07:26:30Z"
+      },
+      {
         "version": "2.4.3.0",
         "changelog": "Restrict server-link visibility and all source-management operations to Jellyfin administrators.",
         "targetAbi": "12.0.0.0",
