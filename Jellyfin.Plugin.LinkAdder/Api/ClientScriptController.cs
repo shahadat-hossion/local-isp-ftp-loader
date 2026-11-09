@@ -26,6 +26,9 @@ public sealed class ClientScriptController : ControllerBase
         (() => {
             'use strict';
 
+            document.getElementById('localIspFtpLoaderDiscoverWidget')?.remove();
+            document.getElementById('localIspFtpLoaderDiscoverWidgetStyles')?.remove();
+
             if (window.__localIspFtpLoaderHeaderButton) return;
             window.__localIspFtpLoaderHeaderButton = true;
 
@@ -95,6 +98,8 @@ public sealed class ClientScriptController : ControllerBase
             }
 
             function ensureButton() {
+                document.getElementById('localIspFtpLoaderDiscoverWidget')?.remove();
+                document.getElementById('localIspFtpLoaderDiscoverWidgetStyles')?.remove();
                 const headerTray = findHeaderTray();
                 if (!headerTray) return;
 

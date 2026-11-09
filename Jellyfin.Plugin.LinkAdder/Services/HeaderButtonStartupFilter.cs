@@ -11,7 +11,7 @@ namespace Jellyfin.Plugin.LinkAdder.Services;
 /// </summary>
 public sealed class HeaderButtonStartupFilter : IStartupFilter
 {
-    private const string ScriptTag = "<script defer src=\"../LocalIspFtpLoader/client.js?v=2.5.2-search2\"></script>";
+    private const string ScriptTag = "<script defer src=\"../LocalIspFtpLoader/client.js?v=2.5.2-search3\"></script>";
 
     /// <inheritdoc />
     public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next)
@@ -58,6 +58,7 @@ public sealed class HeaderButtonStartupFilter : IStartupFilter
                 }
 
                 var output = Encoding.UTF8.GetBytes(html);
+                context.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
                 context.Response.ContentLength = output.Length;
                 await originalBody.WriteAsync(output, context.RequestAborted).ConfigureAwait(false);
                 return;
