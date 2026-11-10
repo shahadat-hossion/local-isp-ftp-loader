@@ -34,7 +34,57 @@ public sealed class ClientScriptController : ControllerBase
 
             const buttonId = 'localIspFtpLoaderHeaderButton';
             const containerId = 'localIspFtpLoaderHeaderButtonContainer';
+            const navigationStyleId = 'localIspFtpLoaderNavigationStyles';
             const addMediaRoute = '#/configurationpage?name=localispmediaadd';
+            const discoverRoute = '#/configurationpage?name=localispdiscovery';
+
+            function ensureNavigationStyles() {
+                if (document.getElementById(navigationStyleId)) return;
+                const style = document.createElement('style');
+                style.id = navigationStyleId;
+                style.textContent = `
+                    .localIspPluginGroup { margin: .35rem 0; }
+                    .localIspPluginParent { display:flex;align-items:center;gap:.85rem;width:100%;padding:.8rem 1.05rem;border:0;background:transparent;color:inherit;font:inherit;font-weight:600;text-align:left;cursor:pointer; }
+                    .localIspPluginParent:hover { background:rgba(255,255,255,.06); }
+                    .localIspPluginParent .material-icons:last-child { margin-left:auto;transition:transform .2s ease; }
+                    .localIspPluginGroup.localIspCollapsed .localIspPluginParent .material-icons:last-child { transform:rotate(-90deg); }
+                    .localIspPluginChildren > a { padding-left:3.1rem!important; }
+                    .localIspPluginGroup.localIspCollapsed .localIspPluginChildren { display:none; }
+                `;
+                document.head.appendChild(style);
+            }
+
+            function routeLink(routeName) {
+                return Array.from(document.querySelectorAll('a[href]')).find((link) =>
+                    link.getAttribute('href')?.toLowerCase().includes(`name=${routeName}`));
+            }
+
+            function ensureNavigationGroup() {
+                ensureNavigationStyles();
+                const discover = routeLink('localispdiscovery');
+                const addMedia = routeLink('localispmediaadd');
+                if (!discover || !addMedia) return;
+                if (discover.closest('.localIspPluginGroup') && addMedia.closest('.localIspPluginGroup')) return;
+                if (discover.parentElement !== addMedia.parentElement) return;
+
+                const navigation = discover.parentElement;
+                const group = document.createElement('div');
+                group.className = 'localIspPluginGroup';
+                const parent = document.createElement('button');
+                parent.type = 'button';
+                parent.className = 'localIspPluginParent';
+                parent.setAttribute('aria-expanded', 'true');
+                parent.innerHTML = '<span class="material-icons storage" aria-hidden="true"></span><span>Local ISP FTP Loader</span><span class="material-icons expand_more" aria-hidden="true"></span>';
+                const children = document.createElement('div');
+                children.className = 'localIspPluginChildren';
+                parent.addEventListener('click', () => {
+                    const collapsed = group.classList.toggle('localIspCollapsed');
+                    parent.setAttribute('aria-expanded', String(!collapsed));
+                });
+                navigation.insertBefore(group, discover);
+                group.append(parent, children);
+                children.append(discover, addMedia);
+            }
 
             function isVisible(element) {
                 return Boolean(element && element.isConnected && element.getClientRects().length);
@@ -119,10 +169,20 @@ public sealed class ClientScriptController : ControllerBase
                 }
             }
 
-            const observer = new MutationObserver(ensureButton);
+            let scheduled = false;
+            const ensureEnhancements = () => {
+                if (scheduled) return;
+                scheduled = true;
+                requestAnimationFrame(() => {
+                    scheduled = false;
+                    ensureButton();
+                    ensureNavigationGroup();
+                });
+            };
+            const observer = new MutationObserver(ensureEnhancements);
 
             function start() {
-                ensureButton();
+                ensureEnhancements();
                 observer.observe(document.body, { childList: true, subtree: true });
             }
 

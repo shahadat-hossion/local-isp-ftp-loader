@@ -14,7 +14,7 @@ public sealed class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     public Plugin(IApplicationPaths paths, IXmlSerializer serializer) : base(paths, serializer) => Instance = this;
     public IEnumerable<PluginPageInfo> GetPages() =>
     [
-        new() { Name="localispmediaadd", EmbeddedResourcePath="Jellyfin.Plugin.LinkAdder.Configuration.configPage.html", EnableInMainMenu=true, DisplayName="Add Media", MenuSection="main", MenuIcon="add" },
-        new() { Name="localispdiscovery", EmbeddedResourcePath="Jellyfin.Plugin.LinkAdder.Configuration.discoveryPage.html", EnableInMainMenu=true, DisplayName="Discover", MenuSection="main", MenuIcon="explore" }
+        new() { Name="localispdiscovery", EmbeddedResourcePath="Jellyfin.Plugin.LinkAdder.Configuration.discoveryPage.html", EnableInMainMenu=true, DisplayName="Discover", MenuSection="main", MenuIcon="explore" },
+        new() { Name="localispmediaadd", EmbeddedResourcePath="Jellyfin.Plugin.LinkAdder.Configuration.configPage.html", EnableInMainMenu=true, DisplayName="Add Media", MenuSection="main", MenuIcon="add" }
     ];
 }

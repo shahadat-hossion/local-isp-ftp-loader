@@ -72,6 +72,76 @@ public sealed partial class LinkAdderService
         return new(created,skipped,"Library scan requested.");
     }
 
+    public async Task<AddResult> DownloadAsync(PreviewResult preview,string outputRoot,CancellationToken ct,Action<double,string>? progress=null)
+    {
+        var created=new List<string>(); var skipped=new List<string>();
+        for(var index=0;index<preview.Files.Count;index++)
+        {
+            var item=preview.Files[index];
+            ct.ThrowIfCancellationRequested();
+            var source=ValidateConfiguredSource(item.Url);
+            if(!IsVideo(source))throw new InvalidOperationException("The selected source contains an unsupported video file.");
+            var parts=item.RelativePath.Split(Path.DirectorySeparatorChar,2);
+            if(parts.Length!=2)throw new InvalidOperationException("Invalid planned path.");
+            var root=Path.GetFullPath(outputRoot);
+            var relative=Path.ChangeExtension(parts[1],Path.GetExtension(WebUtility.UrlDecode(source.AbsolutePath)));
+            var destination=Path.GetFullPath(Path.Combine(root,relative));
+            if(!destination.StartsWith(root.TrimEnd(Path.DirectorySeparatorChar)+Path.DirectorySeparatorChar,StringComparison.OrdinalIgnoreCase))throw new InvalidOperationException("Unsafe output path rejected.");
+            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+            if(File.Exists(destination)){skipped.Add(destination);progress?.Invoke(100d*(index+1)/preview.Files.Count,$"Skipped existing file {index+1} of {preview.Files.Count}.");continue;}
+            var temporary=destination+"."+Guid.NewGuid().ToString("N")+".part";
+            try
+            {
+                var fileNumber=index+1;
+                await DownloadFileAsync(source,temporary,ct,(fraction,fileName)=>progress?.Invoke(100d*(index+fraction)/preview.Files.Count,$"Downloading {fileNumber} of {preview.Files.Count}: {fileName}")).ConfigureAwait(false);
+                File.Move(temporary,destination);
+                created.Add(destination);
+                progress?.Invoke(100d*(index+1)/preview.Files.Count,$"Downloaded {fileNumber} of {preview.Files.Count}.");
+            }
+            finally
+            {
+                if(File.Exists(temporary))File.Delete(temporary);
+            }
+        }
+        return new(created,skipped,"Library scan requested.");
+    }
+
+    private async Task DownloadFileAsync(Uri source,string destination,CancellationToken ct,Action<double,string>? progress)
+    {
+        var root=FindRoot(source);
+        await using var output=new FileStream(destination,FileMode.CreateNew,FileAccess.Write,FileShare.None,1024*128,useAsync:true);
+        if(source.Scheme=="ftp")
+        {
+#pragma warning disable SYSLIB0014
+            var request=(FtpWebRequest)WebRequest.Create(source);request.Method=WebRequestMethods.Ftp.DownloadFile;request.UsePassive=true;request.UseBinary=true;request.KeepAlive=false;
+            request.Credentials=root.Username.Length>0?new NetworkCredential(root.Username,root.Password):new NetworkCredential("anonymous","anonymous@");
+            using var registration=ct.Register(request.Abort);
+            using var response=(FtpWebResponse)await request.GetResponseAsync().WaitAsync(ct).ConfigureAwait(false);
+            await CopyWithProgressAsync(response.GetResponseStream(),output,response.ContentLength,Path.GetFileName(WebUtility.UrlDecode(source.AbsolutePath)),ct,progress).ConfigureAwait(false);
+#pragma warning restore SYSLIB0014
+            return;
+        }
+        using var handler=new HttpClientHandler();
+        if(root.Username.Length>0)handler.Credentials=new NetworkCredential(root.Username,root.Password);
+        using var client=new HttpClient(handler){Timeout=Timeout.InfiniteTimeSpan};
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("Local-ISP-FTP-Loader/2.6");
+        using var responseMessage=await client.GetAsync(source,HttpCompletionOption.ResponseHeadersRead,ct).ConfigureAwait(false);
+        responseMessage.EnsureSuccessStatusCode();
+        await using var input=await responseMessage.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
+        await CopyWithProgressAsync(input,output,responseMessage.Content.Headers.ContentLength??-1,Path.GetFileName(WebUtility.UrlDecode(source.AbsolutePath)),ct,progress).ConfigureAwait(false);
+    }
+
+    private static async Task CopyWithProgressAsync(Stream input,Stream output,long length,string fileName,CancellationToken ct,Action<double,string>? progress)
+    {
+        var buffer=new byte[1024*128];long copied=0;int read;
+        while((read=await input.ReadAsync(buffer,ct).ConfigureAwait(false))>0)
+        {
+            await output.WriteAsync(buffer.AsMemory(0,read),ct).ConfigureAwait(false);copied+=read;
+            progress?.Invoke(length>0?Math.Clamp((double)copied/length,0,1):0,fileName);
+        }
+        progress?.Invoke(1,fileName);
+    }
+
     private async Task<IReadOnlyList<IndexedTitle>> GetSearchIndexAsync(string mediaType,RemoteRoot[] roots,CancellationToken ct)
     {
         var signature=string.Join('|',roots.OrderBy(x=>x.Url.AbsoluteUri,StringComparer.OrdinalIgnoreCase).Select(x=>$"{x.Url.AbsoluteUri}\u001f{x.Username}"));

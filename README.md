@@ -11,11 +11,11 @@
   <img src="https://img.shields.io/badge/Jellyfin-12.0.0-00A4DC?logo=jellyfin" alt="Jellyfin 12.0.0">
 </p>
 
-**Search private FTP, HTTP, or HTTPS media servers and add movies, TV shows, web series, and anime to Jellyfin as `.strm` files.**
+**Search private FTP, HTTP, or HTTPS media servers and add movies, TV shows, web series, and anime to Jellyfin as `.strm` files or administrator-downloaded local media.**
 
 Local ISP FTP Loader is a Jellyfin 12 plugin for media indexes hosted by a local ISP, home server, NAS, or another private-network server. Signed-in Jellyfin users can search those configured sources from a PC, TV, or phone and add a title to an existing Jellyfin library without manually browsing directories or copying links.
 
-The plugin creates small `.strm` pointer files. It **does not download or duplicate video files**; playback continues to use the original private server.
+By default, the plugin creates small `.strm` pointer files and playback continues to use the original private server. Administrators can instead explicitly download the actual video files into the selected Jellyfin library.
 
 > [!IMPORTANT]
 > Only loopback and private IPv4 sources are accepted (`10.x.x.x`, `172.16-31.x.x`, and `192.168.x.x`). The Jellyfin server must be able to route to the source. This is not a public internet search engine, torrent client, or general-purpose FTP browser.
@@ -27,6 +27,7 @@ The plugin creates small `.strm` pointer files. It **does not download or duplic
 - Configure a shared **Movies & TV Series (Both)** source.
 - Browse poster-card results and preview the playable files found in a title folder.
 - Create organized `.strm` files in any compatible, writable Jellyfin library.
+- Let administrators download actual movies, series episodes, and anime episodes into the selected library folder.
 - Preserve season subfolders and remote series structure where available.
 - Skip existing destination files instead of overwriting them.
 - Test one source or all configured sources from the plugin page.
@@ -87,7 +88,7 @@ The plugin does not include provider-specific addresses. Each administrator supp
 3. Enter at least two characters from the title and select **Search**.
 4. Select the correct poster card and review the discovered video files.
 5. Choose a compatible destination library.
-6. Select **Add to Library**.
+6. Select **Add to Library** for the default lightweight `.strm` entry. Administrators may select **Download to library** to store the actual video file(s) locally.
 7. Allow Jellyfin's library scan to detect the new `.strm` files and fetch metadata.
 
 Jellyfin handles metadata, artwork, transcoding, and playback normally. The remote server must remain reachable whenever a stream is played.
@@ -126,7 +127,7 @@ The exact Linux path can differ for Docker, Snap, or other installation methods.
 Private FTP/HTTP index
         ↓ search and inspect
 Local ISP FTP Loader
-        ↓ create .strm pointers
+        ↓ create .strm pointers or download actual files (admin)
 Existing Jellyfin library
         ↓ normal library scan
 Jellyfin metadata and playback
@@ -182,6 +183,7 @@ Restart Jellyfin, close and reopen **Add Media**, then hard-refresh the web clie
 - A source URL must remain inside a configured private root.
 - A destination must match a current compatible Jellyfin library.
 - Existing local files are not overwritten.
+- Actual media downloads require Jellyfin administrator elevation and can only target a current compatible library path.
 - FTP credentials remain in Jellyfin's plugin configuration.
 
 ## Build from source
@@ -197,7 +199,7 @@ The build creates a release ZIP and MD5 checksum in `dist`. The ZIP contains the
 ## Limitations
 
 - No IMDb, TMDb, Google, torrent, or public-internet media search.
-- No media download or local video duplication.
+- Downloads run as background jobs on the Jellyfin server, so the administrator may leave or close the Add Media page after starting one. Restarting Jellyfin interrupts active transfers; partial files are discarded rather than imported.
 - No automatic Jellyfin library creation or reconfiguration.
 - No anonymous access or public FTP/HTTP roots.
 - No ability to bypass ISP routing or make a private server reachable from another network.

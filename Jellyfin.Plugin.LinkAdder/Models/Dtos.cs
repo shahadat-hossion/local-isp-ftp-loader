@@ -7,6 +7,8 @@ public sealed record LibraryOption(string Name, string Path, string MediaType);
 public sealed record PlannedFile(string Url, string RelativePath);
 public sealed record PreviewResult(string Title, IReadOnlyList<PlannedFile> Files);
 public sealed record AddResult(IReadOnlyList<string> Created, IReadOnlyList<string> Skipped, string Refresh);
+public sealed record DownloadJobStarted(string JobId);
+public sealed record DownloadJobView(string JobId, string Status, double Percentage, string Message, int Downloaded, int Skipped);
 public sealed record CustomSourceRequest(string Name, string Url, string MediaType, string? Username, string? Password);
 public sealed record TestSourceRequest(string Url, string? Username, string? Password);
 public sealed record TestSourceResult(bool Success, int Entries, string Message);

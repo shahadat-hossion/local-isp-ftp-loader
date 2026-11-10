@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Collections.Concurrent;
 using Jellyfin.Plugin.LinkAdder.Configuration;
 using Jellyfin.Plugin.LinkAdder.Models;
 using Jellyfin.Plugin.LinkAdder.Services;
@@ -15,6 +16,16 @@ namespace Jellyfin.Plugin.LinkAdder.Api;
 [Route("Plugins/LinkAdder")]
 public sealed class LinkAdderController : ControllerBase
 {
+    private sealed class DownloadJob
+    {
+        public string Status { get; set; } = "queued";
+        public double Percentage { get; set; }
+        public string Message { get; set; } = "Preparing download…";
+        public int Downloaded { get; set; }
+        public int Skipped { get; set; }
+        public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
+    }
+    private static readonly ConcurrentDictionary<string, DownloadJob> DownloadJobs = new(StringComparer.OrdinalIgnoreCase);
     private static readonly object ConfigurationLock = new();
     private readonly LinkAdderService _service;
     private readonly ILibraryManager _library;
@@ -55,6 +66,61 @@ public sealed class LinkAdderController : ControllerBase
         var result = _service.Write(preview, option.Path);
         _ = Task.Run(() => _library.ValidateMediaLibrary(new Progress<double>(), CancellationToken.None));
         return Ok(result with { Refresh = "Jellyfin library scan started." });
+    }
+
+    [HttpPost("Download")]
+    [Authorize(Policy = Policies.RequiresElevation)]
+    public async Task<ActionResult<AddResult>> Download([FromBody] AddRequest request, CancellationToken ct)
+    {
+        var mediaType = NormalizeMediaType(request.MediaType);
+        var requestedPath = string.IsNullOrWhiteSpace(request.LibraryPath) ? string.Empty : Path.GetFullPath(request.LibraryPath);
+        var option = LibrariesForValidation().FirstOrDefault(x => x.MediaType == mediaType && x.Path.Equals(requestedPath, StringComparison.OrdinalIgnoreCase));
+        if (option is null) return BadRequest(new { error = "Select a compatible Jellyfin library." });
+        var preview = await _service.PreviewAsync(request.Url, request.MediaType, request.Title, ct).ConfigureAwait(false);
+        var result = await _service.DownloadAsync(preview, option.Path, ct).ConfigureAwait(false);
+        _ = Task.Run(() => _library.ValidateMediaLibrary(new Progress<double>(), CancellationToken.None));
+        return Ok(result with { Refresh = "Download complete. Jellyfin library scan started." });
+    }
+
+    [HttpPost("Downloads")]
+    [Authorize(Policy = Policies.RequiresElevation)]
+    public ActionResult<DownloadJobStarted> StartDownload([FromBody] AddRequest request)
+    {
+        var mediaType = NormalizeMediaType(request.MediaType);
+        var requestedPath = string.IsNullOrWhiteSpace(request.LibraryPath) ? string.Empty : Path.GetFullPath(request.LibraryPath);
+        var option = LibrariesForValidation().FirstOrDefault(x => x.MediaType == mediaType && x.Path.Equals(requestedPath, StringComparison.OrdinalIgnoreCase));
+        if (option is null) return BadRequest(new { error = "Select a compatible Jellyfin library." });
+        foreach (var expired in DownloadJobs.Where(x => x.Value.UpdatedUtc < DateTime.UtcNow.AddHours(-12)).Select(x => x.Key).ToArray()) DownloadJobs.TryRemove(expired, out _);
+        var id = Guid.NewGuid().ToString("N");
+        var job = new DownloadJob();
+        DownloadJobs[id] = job;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                job.Status = "running"; job.UpdatedUtc = DateTime.UtcNow;
+                var preview = await _service.PreviewAsync(request.Url, request.MediaType, request.Title, CancellationToken.None).ConfigureAwait(false);
+                var result = await _service.DownloadAsync(preview, option.Path, CancellationToken.None, (percentage, message) =>
+                {
+                    job.Percentage = Math.Round(percentage, 1); job.Message = message; job.UpdatedUtc = DateTime.UtcNow;
+                }).ConfigureAwait(false);
+                job.Downloaded = result.Created.Count; job.Skipped = result.Skipped.Count; job.Percentage = 100; job.Status = "complete"; job.Message = "Download complete. Jellyfin library scan started."; job.UpdatedUtc = DateTime.UtcNow;
+                await _library.ValidateMediaLibrary(new Progress<double>(), CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                job.Status = "failed"; job.Message = ex.Message; job.UpdatedUtc = DateTime.UtcNow;
+            }
+        });
+        return Accepted(new DownloadJobStarted(id));
+    }
+
+    [HttpGet("Downloads/{id}")]
+    [Authorize(Policy = Policies.RequiresElevation)]
+    public ActionResult<DownloadJobView> DownloadStatus(string id)
+    {
+        if (!DownloadJobs.TryGetValue(id, out var job)) return NotFound(new { error = "Download job was not found." });
+        return Ok(new DownloadJobView(id, job.Status, job.Percentage, job.Message, job.Downloaded, job.Skipped));
     }
 
     [HttpPost("Sources/Test")]
