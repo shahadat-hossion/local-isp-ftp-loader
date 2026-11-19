@@ -15,6 +15,8 @@ public sealed class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     public IEnumerable<PluginPageInfo> GetPages() =>
     [
         new() { Name="localispdiscovery", EmbeddedResourcePath="Jellyfin.Plugin.LinkAdder.Configuration.discoveryPage.html", EnableInMainMenu=true, DisplayName="Discover", MenuSection="main", MenuIcon="explore" },
-        new() { Name="localispmediaadd", EmbeddedResourcePath="Jellyfin.Plugin.LinkAdder.Configuration.configPage.html", EnableInMainMenu=true, DisplayName="Add Media", MenuSection="main", MenuIcon="add" }
+        new() { Name="localispsearch", EmbeddedResourcePath="Jellyfin.Plugin.LinkAdder.Configuration.searchPage.html", EnableInMainMenu=false, DisplayName="Search & Add", MenuSection="main", MenuIcon="search" },
+        new() { Name="localispmediaadd", EmbeddedResourcePath="Jellyfin.Plugin.LinkAdder.Configuration.configPage.html", EnableInMainMenu=false, DisplayName="Media Sources", MenuSection="main", MenuIcon="storage" },
+        new() { Name="localispimportlink", EmbeddedResourcePath="Jellyfin.Plugin.LinkAdder.Configuration.importLinkPage.html", EnableInMainMenu=true, DisplayName="Import Link", MenuSection="main", MenuIcon="link" }
     ];
 }

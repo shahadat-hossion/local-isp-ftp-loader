@@ -26,6 +26,7 @@ public sealed class LinkAdderController : ControllerBase
         public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
     }
     private static readonly ConcurrentDictionary<string, DownloadJob> DownloadJobs = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> AddLocks = new(StringComparer.OrdinalIgnoreCase);
     private static readonly object ConfigurationLock = new();
     private readonly LinkAdderService _service;
     private readonly ILibraryManager _library;
@@ -47,6 +48,23 @@ public sealed class LinkAdderController : ControllerBase
     [HttpGet("Libraries")]
     public ActionResult<IReadOnlyList<LibraryOption>> Libraries() => Ok(LibrariesForValidation().OrderBy(x => x.Name).ToArray());
 
+    [HttpGet("SearchUiSettings")]
+    public ActionResult<SearchUiSettings> SearchUiSettings() =>
+        Ok(new SearchUiSettings(Plugin.Instance?.Configuration.ReplaceDefaultSearch ?? true));
+
+    [HttpPost("SearchUiSettings")]
+    [Authorize(Policy = Policies.RequiresElevation)]
+    public ActionResult<SearchUiSettings> SaveSearchUiSettings([FromBody] SearchUiSettings request)
+    {
+        lock (ConfigurationLock)
+        {
+            var configuration = Plugin.Instance?.Configuration ?? throw new InvalidOperationException("Plugin configuration is unavailable.");
+            configuration.ReplaceDefaultSearch = request.ReplaceDefaultSearch;
+            Plugin.Instance!.UpdateConfiguration(configuration);
+        }
+        return Ok(request);
+    }
+
     [HttpPost("Remote/Search")]
     public async Task<ActionResult<IReadOnlyList<RemoteSearchResult>>> SearchRemote([FromBody] RemoteSearchRequest request, CancellationToken ct) =>
         Ok(await _service.SearchRemoteAsync(request.MediaType, request.Query, ct).ConfigureAwait(false));
@@ -62,10 +80,21 @@ public sealed class LinkAdderController : ControllerBase
         var requestedPath = string.IsNullOrWhiteSpace(request.LibraryPath) ? string.Empty : Path.GetFullPath(request.LibraryPath);
         var option = LibrariesForValidation().FirstOrDefault(x => x.MediaType == mediaType && x.Path.Equals(requestedPath, StringComparison.OrdinalIgnoreCase));
         if (option is null) return BadRequest(new { error = "Select a compatible Jellyfin library." });
-        var preview = await _service.PreviewAsync(request.Url, request.MediaType, request.Title, ct).ConfigureAwait(false);
-        var result = _service.Write(preview, option.Path);
-        _ = Task.Run(() => _library.ValidateMediaLibrary(new Progress<double>(), CancellationToken.None));
-        return Ok(result with { Refresh = "Jellyfin library scan started." });
+        var source = _service.ValidateConfiguredSource(request.Url);
+        var addKey = $"{option.Path}\n{mediaType}\n{source.AbsoluteUri}";
+        var addLock = AddLocks.GetOrAdd(addKey, _ => new SemaphoreSlim(1, 1));
+        await addLock.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            var preview = await _service.PreviewAsync(source.AbsoluteUri, request.MediaType, request.Title, ct).ConfigureAwait(false);
+            var result = _service.Write(preview, option.Path);
+            _ = Task.Run(() => _library.ValidateMediaLibrary(new Progress<double>(), CancellationToken.None));
+            return Ok(result with { Refresh = "Jellyfin library scan started." });
+        }
+        finally
+        {
+            addLock.Release();
+        }
     }
 
     [HttpPost("Download")]

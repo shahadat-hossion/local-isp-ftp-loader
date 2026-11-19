@@ -24,6 +24,7 @@ By default, the plugin creates small `.strm` pointer files and playback continue
 
 - Search multiple private FTP, HTTP, and HTTPS directory indexes from Jellyfin.
 - Paste a direct media file or folder link from a configured source and analyze it before adding.
+- Keep title search and direct-link importing on separate, focused Jellyfin pages.
 - Separate searches for **Movies**, **Shows**, and **Anime**.
 - Configure a shared **Movies & TV Series (Both)** source.
 - Browse poster-card results and preview the playable files found in a title folder.
@@ -84,13 +85,14 @@ The plugin does not include provider-specific addresses. Each administrator supp
 
 ## Search and add media
 
-1. Open **Add Media** from the main menu or select the **+** button beside Search in the Jellyfin web header.
-2. Choose **Movies**, **Shows**, or **Anime**.
-3. Enter at least two characters from the title and select **Search**.
-4. Select the correct poster card and review the discovered video files.
-5. Choose a compatible destination library.
-6. Select **Add to Library** for the default lightweight `.strm` entry. Administrators may select **Download to library** to store the actual video file(s) locally.
-7. Allow Jellyfin's library scan to detect the new `.strm` files and fetch metadata.
+1. Select the **Search & Add Media** icon in the Jellyfin web header or open **Search & Add** from the plugin menu.
+2. Enter at least two characters from a movie, show, episode, or anime title.
+3. Review **In Your Library** first. Local results can be played or opened immediately.
+4. Review **Available from Media Servers** below it. Titles already present in Jellyfin are disabled automatically.
+5. Select **Add & Play** for a movie or **Add & Open** for a show or anime. If more than one compatible destination exists, choose the library when prompted.
+6. The plugin creates the lightweight `.strm` files, starts a Jellyfin scan, waits for the indexed item, and then plays the movie or opens the show. If indexing exceeds 90 seconds, it reports that the title was added and lets Jellyfin finish in the background.
+
+Administrators can expand **Search button settings** on the unified search page to keep Jellyfin's standard search button or replace it with the plugin search. The plugin search icon is always labelled **Search & Add Media** for accessibility.
 
 Jellyfin handles metadata, artwork, transcoding, and playback normally. The remote server must remain reachable whenever a stream is played.
 

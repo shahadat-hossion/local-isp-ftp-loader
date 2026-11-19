@@ -2,6 +2,7 @@ using MediaBrowser.Model.Plugins;
 namespace Jellyfin.Plugin.LinkAdder.Configuration;
 public sealed class PluginConfiguration : BasePluginConfiguration
 {
+    public bool ReplaceDefaultSearch { get; set; } = true;
     public List<CustomSource> CustomSources { get; set; } = [];
     public List<MediaAddRequest> MediaRequests { get; set; } = [];
     public AutomationOptions Automation { get; set; } = new();
