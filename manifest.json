@@ -13,8 +13,8 @@
         "changelog": "Add direct media-link analysis on the Add Media page so users can paste a configured-source file or folder URL, preview generated STRM entries, and add them to a Jellyfin library.",
         "targetAbi": "12.0.0.0",
         "sourceUrl": "https://github.com/shahadat-hossion/local-isp-ftp-loader/releases/download/v2.6.1/Local-ISP-FTP-Loader-2.6.1.zip",
-        "checksum": "566c93f6823f7db501c500a7a20dca2d",
-        "timestamp": "2026-11-19T18:29:02Z"
+        "checksum": "9a4c33e6416f5b1ca0547b89361dfbea",
+        "timestamp": "2026-11-19T18:29:59Z"
       },
       {
         "version": "2.6.0.0",
