@@ -23,6 +23,7 @@ By default, the plugin creates small `.strm` pointer files and playback continue
 ## Features
 
 - Search multiple private FTP, HTTP, and HTTPS directory indexes from Jellyfin.
+- Paste a direct media file or folder link from a configured source and analyze it before adding.
 - Separate searches for **Movies**, **Shows**, and **Anime**.
 - Configure a shared **Movies & TV Series (Both)** source.
 - Browse poster-card results and preview the playable files found in a title folder.

@@ -1,14 +1,14 @@
 {
   "category": "General",
-  "changelog": "Add administrator-only downloads of actual movie, TV, and anime video files directly into compatible Jellyfin library folders.",
+  "changelog": "Add direct media-link analysis on the Add Media page so users can paste a configured-source file or folder URL, preview generated STRM entries, and add them to a Jellyfin library.",
   "description": "Search user-configured local ISP media servers, add STRM entries, or download media to Jellyfin storage.",
   "guid": "9399b942-4b6d-46a7-9a5d-a01764f7ee6a",
   "name": "Local ISP FTP Loader",
   "overview": "Search local ISP media, create STRM entries, or download files locally.",
   "owner": "shahadat-hossion",
   "targetAbi": "12.0.0.0",
-  "timestamp": "2026-11-10T00:00:00Z",
-  "version": "2.6.0.0",
+  "timestamp": "2026-11-20T00:00:00Z",
+  "version": "2.6.1.0",
   "status": "Active",
   "autoUpdate": false,
   "assemblies": []
