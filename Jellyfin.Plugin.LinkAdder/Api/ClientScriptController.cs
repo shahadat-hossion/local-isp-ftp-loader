@@ -37,6 +37,7 @@ public sealed class ClientScriptController : ControllerBase
             const userMenuItemId = 'localIspFtpLoaderUserMenuItem';
             const navigationStyleId = 'localIspFtpLoaderNavigationStyles';
             const addMediaRoute = '#/search';
+            const importLinkRoute = '#/configurationpage?name=localispimportlink';
             const discoverRoute = '#/configurationpage?name=localispdiscovery';
             let replaceDefaultSearch = null;
 
@@ -100,6 +101,10 @@ public sealed class ClientScriptController : ControllerBase
                 window.location.hash = addMediaRoute;
             }
 
+            function openImportLink() {
+                window.location.hash = importLinkRoute;
+            }
+
             function ensureUserMenuItem() {
                 const menu = document.getElementById('app-user-menu');
                 if (!menu || !isVisible(menu) || menu.querySelector(`#${userMenuItemId}`)) return;
@@ -133,7 +138,7 @@ public sealed class ClientScriptController : ControllerBase
                     event.preventDefault();
                     event.stopPropagation();
                     document.querySelector('[aria-controls="app-user-menu"]')?.click();
-                    openAddMedia();
+                    openImportLink();
                 };
                 item.addEventListener('click', activate);
                 item.addEventListener('keydown', activate);
