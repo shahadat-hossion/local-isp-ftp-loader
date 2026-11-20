@@ -65,6 +65,34 @@ public sealed class LinkAdderController : ControllerBase
         return Ok(request);
     }
 
+    [HttpGet("SearchDestinations")]
+    public ActionResult<SearchDestinationSettings> SearchDestinations()
+    {
+        var options = Plugin.Instance?.Configuration.SearchDestinations ?? new SearchDestinationOptions();
+        return Ok(new SearchDestinationSettings(options.MovieLibraryPath, options.SeriesLibraryPath, options.AnimeLibraryPath));
+    }
+
+    [HttpPost("SearchDestinations")]
+    [Authorize(Policy = Policies.RequiresElevation)]
+    public ActionResult<SearchDestinationSettings> SaveSearchDestinations([FromBody] SearchDestinationSettings request)
+    {
+        var moviePath = ValidateOptionalLibraryPath(request.MovieLibraryPath, "movie");
+        var seriesPath = ValidateOptionalLibraryPath(request.SeriesLibraryPath, "series");
+        var animePath = ValidateOptionalLibraryPath(request.AnimeLibraryPath, "anime");
+        lock (ConfigurationLock)
+        {
+            var configuration = Plugin.Instance?.Configuration ?? throw new InvalidOperationException("Plugin configuration is unavailable.");
+            configuration.SearchDestinations = new SearchDestinationOptions
+            {
+                MovieLibraryPath = moviePath,
+                SeriesLibraryPath = seriesPath,
+                AnimeLibraryPath = animePath
+            };
+            Plugin.Instance!.UpdateConfiguration(configuration);
+        }
+        return Ok(new SearchDestinationSettings(moviePath, seriesPath, animePath));
+    }
+
     [HttpPost("Remote/Search")]
     public async Task<ActionResult<IReadOnlyList<RemoteSearchResult>>> SearchRemote([FromBody] RemoteSearchRequest request, CancellationToken ct) =>
         Ok(await _service.SearchRemoteAsync(request.MediaType, request.Query, ct).ConfigureAwait(false));
@@ -77,9 +105,10 @@ public sealed class LinkAdderController : ControllerBase
     public async Task<ActionResult<AddResult>> Add([FromBody] AddRequest request, CancellationToken ct)
     {
         var mediaType = NormalizeMediaType(request.MediaType);
-        var requestedPath = string.IsNullOrWhiteSpace(request.LibraryPath) ? string.Empty : Path.GetFullPath(request.LibraryPath);
+        var configuredPath = DefaultLibraryPath(mediaType);
+        var requestedPath = string.IsNullOrWhiteSpace(configuredPath) ? string.Empty : Path.GetFullPath(configuredPath);
         var option = LibrariesForValidation().FirstOrDefault(x => x.MediaType == mediaType && x.Path.Equals(requestedPath, StringComparison.OrdinalIgnoreCase));
-        if (option is null) return BadRequest(new { error = "Select a compatible Jellyfin library." });
+        if (option is null) return BadRequest(new { error = $"Set the {mediaType} search destination on the FTP Servers page." });
         var source = _service.ValidateConfiguredSource(request.Url);
         var addKey = $"{option.Path}\n{mediaType}\n{source.AbsoluteUri}";
         var addLock = AddLocks.GetOrAdd(addKey, _ => new SemaphoreSlim(1, 1));
@@ -102,9 +131,10 @@ public sealed class LinkAdderController : ControllerBase
     public async Task<ActionResult<AddResult>> Download([FromBody] AddRequest request, CancellationToken ct)
     {
         var mediaType = NormalizeMediaType(request.MediaType);
-        var requestedPath = string.IsNullOrWhiteSpace(request.LibraryPath) ? string.Empty : Path.GetFullPath(request.LibraryPath);
+        var configuredPath = DefaultLibraryPath(mediaType);
+        var requestedPath = string.IsNullOrWhiteSpace(configuredPath) ? string.Empty : Path.GetFullPath(configuredPath);
         var option = LibrariesForValidation().FirstOrDefault(x => x.MediaType == mediaType && x.Path.Equals(requestedPath, StringComparison.OrdinalIgnoreCase));
-        if (option is null) return BadRequest(new { error = "Select a compatible Jellyfin library." });
+        if (option is null) return BadRequest(new { error = $"Set the {mediaType} default save location on the FTP Servers page." });
         var preview = await _service.PreviewAsync(request.Url, request.MediaType, request.Title, ct).ConfigureAwait(false);
         var result = await _service.DownloadAsync(preview, option.Path, ct).ConfigureAwait(false);
         _ = Task.Run(() => _library.ValidateMediaLibrary(new Progress<double>(), CancellationToken.None));
@@ -116,9 +146,10 @@ public sealed class LinkAdderController : ControllerBase
     public ActionResult<DownloadJobStarted> StartDownload([FromBody] AddRequest request)
     {
         var mediaType = NormalizeMediaType(request.MediaType);
-        var requestedPath = string.IsNullOrWhiteSpace(request.LibraryPath) ? string.Empty : Path.GetFullPath(request.LibraryPath);
+        var configuredPath = DefaultLibraryPath(mediaType);
+        var requestedPath = string.IsNullOrWhiteSpace(configuredPath) ? string.Empty : Path.GetFullPath(configuredPath);
         var option = LibrariesForValidation().FirstOrDefault(x => x.MediaType == mediaType && x.Path.Equals(requestedPath, StringComparison.OrdinalIgnoreCase));
-        if (option is null) return BadRequest(new { error = "Select a compatible Jellyfin library." });
+        if (option is null) return BadRequest(new { error = $"Set the {mediaType} default save location on the FTP Servers page." });
         foreach (var expired in DownloadJobs.Where(x => x.Value.UpdatedUtc < DateTime.UtcNow.AddHours(-12)).Select(x => x.Key).ToArray()) DownloadJobs.TryRemove(expired, out _);
         var id = Guid.NewGuid().ToString("N");
         var job = new DownloadJob();
@@ -356,9 +387,7 @@ public sealed class LinkAdderController : ControllerBase
         if (request.MaxPerCategory is < 1 or > 25) return BadRequest(new { error = "Category limit must be between 1 and 25." });
         if (request.MinimumRating is < 0 or > 10) return BadRequest(new { error = "Minimum rating must be between 0 and 10." });
         if (request.MinimumVotes is < 0 or > 10000000) return BadRequest(new { error = "Minimum votes is invalid." });
-        var moviePath = ValidateOptionalLibraryPath(request.MovieLibraryPath, "movie");
-        var seriesPath = ValidateOptionalLibraryPath(request.SeriesLibraryPath, "series");
-        var animePath = ValidateOptionalLibraryPath(request.AnimeLibraryPath, "anime");
+        var destinations = Plugin.Instance?.Configuration.SearchDestinations ?? new SearchDestinationOptions();
         lock (ConfigurationLock)
         {
             var configuration = Plugin.Instance?.Configuration ?? throw new InvalidOperationException("Plugin configuration is unavailable.");
@@ -379,9 +408,9 @@ public sealed class LinkAdderController : ControllerBase
                 MaxPerCategory = request.MaxPerCategory,
                 MinimumRating = request.MinimumRating,
                 MinimumVotes = request.MinimumVotes,
-                MovieLibraryPath = moviePath,
-                SeriesLibraryPath = seriesPath,
-                AnimeLibraryPath = animePath,
+                MovieLibraryPath = destinations.MovieLibraryPath,
+                SeriesLibraryPath = destinations.SeriesLibraryPath,
+                AnimeLibraryPath = destinations.AnimeLibraryPath,
                 LastRunUtc = previous.LastRunUtc
             };
             Plugin.Instance!.UpdateConfiguration(configuration);
@@ -473,6 +502,18 @@ public sealed class LinkAdderController : ControllerBase
             CollectionType(v.Name, v.CollectionType?.ToString()))))
         .Where(x => x.MediaType.Length > 0)
         .ToArray();
+
+    private static string DefaultLibraryPath(string mediaType)
+    {
+        var destinations = Plugin.Instance?.Configuration.SearchDestinations ?? new SearchDestinationOptions();
+        return mediaType switch
+        {
+            "movie" => destinations.MovieLibraryPath,
+            "series" => destinations.SeriesLibraryPath,
+            "anime" => destinations.AnimeLibraryPath,
+            _ => string.Empty
+        };
+    }
 
     private static MediaRequestView ToView(MediaAddRequest item) => new(item.Id, item.RequestedBy, item.Title, item.Url, item.MediaType, item.RequestedAtUtc);
     private static AutomationSettingsView ToAutomationView(AutomationOptions x) => new(x.Enabled, x.PreviewOnly, !string.IsNullOrWhiteSpace(x.TmdbCredential), x.TrendingMovies, x.NewMovies, x.TopMovies, x.TrendingSeries, x.NewSeries, x.TopSeries, x.TrendingAnime, x.IntervalHours, x.MaxPerCategory, x.MinimumRating, x.MinimumVotes, x.MovieLibraryPath, x.SeriesLibraryPath, x.AnimeLibraryPath, x.LastRunUtc, x.LastRunUtc?.AddHours(Math.Clamp(x.IntervalHours, 1, 168)));

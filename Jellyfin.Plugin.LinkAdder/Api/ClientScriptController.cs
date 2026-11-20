@@ -298,6 +298,8 @@ public sealed class ClientScriptController : ControllerBase
             let nativeSearchSequence = 0;
             let libraryOptions = null;
             let nativeLocalTitles = new Set();
+            let nativeLocalItems = [];
+            let nativeRemoteItems = [];
 
             const value = (item, name) => item?.[name[0].toLowerCase() + name.slice(1)] ?? item?.[name];
             const escapeHtml = (text) => String(text ?? '').replace(/[&<>"']/g, (character) => ({
@@ -347,7 +349,7 @@ public sealed class ClientScriptController : ControllerBase
                 if (section) return section;
                 section = document.createElement('section');
                 section.id = remoteSectionId;
-                section.innerHTML = '<div class="localIspNativeFields"><div class="localIspNativeInputRow"><span class="material-icons search" aria-hidden="true"></span><div class="inputContainer"><input id="localIspNativeQuery" class="emby-input" type="text" placeholder="Search" autocomplete="off"></div></div></div><div id="localIspLocalResults" class="localIspResultSection"></div><div id="localIspRemoteResults" class="localIspResultSection"><h2 class="sectionTitle sectionTitle-cards focuscontainer-x padded-left padded-right">Available from Media Servers</h2><div class="localIspSearchMessage">Enter at least two characters to search configured FTP and HTTP servers.</div></div>';
+                section.innerHTML = '<div class="localIspNativeFields"><div class="localIspNativeInputRow"><span class="material-icons search" aria-hidden="true"></span><div class="inputContainer"><input id="localIspNativeQuery" class="emby-input" type="text" placeholder="Search" autocomplete="off"></div></div></div><div id="localIspCombinedResults" class="localIspResultSection"><h2 class="sectionTitle sectionTitle-cards focuscontainer-x padded-left padded-right">Search Results</h2><div class="localIspSearchMessage">Enter at least two characters to search your library and configured media servers.</div></div>';
                 document.body.appendChild(section);
                 return section;
             }
@@ -365,22 +367,20 @@ public sealed class ClientScriptController : ControllerBase
             }
 
             function renderLocalResults(items) {
-                nativeLocalTitles = new Set(items.map((item) => normalizeTitle(item.SeriesName || item.Name)).filter(Boolean));
-                const container = document.querySelector('#localIspLocalResults');
-                if (!container) return;
-                container.innerHTML = '<h2 class="sectionTitle sectionTitle-cards focuscontainer-x padded-left padded-right">In Your Library</h2>'
-                    + (items.length ? `<div class="localIspRemoteGrid">${items.map(localCard).join('')}</div>` : '<div class="localIspSearchMessage">No matching titles are currently in your library.</div>');
-                container.querySelectorAll('.localIspOpenButton').forEach((button) => button.addEventListener('click', async () => {
-                    const item = await ApiClient.getItem(ApiClient.getCurrentUserId(), button.dataset.id);
-                    openIndexedItem(item);
-                }));
+                const seen = new Set();
+                nativeLocalItems = items.filter((item) => {
+                    const key = normalizeTitle(item.SeriesName || item.Name);
+                    return key && !seen.has(key) && seen.add(key);
+                });
+                nativeLocalTitles = new Set(nativeLocalItems.map((item) => normalizeTitle(item.SeriesName || item.Name)));
+                renderCombinedResults();
             }
 
             function remoteCard(item, index, exists) {
                 const poster = item.posterUrl
                     ? `<span class="localIspPoster" role="img" aria-label="${escapeHtml(item.name)} poster" style="background-image:url('${escapeHtml(item.posterUrl).replace(/'/g, '%27')}')"></span>`
                     : '<span class="localIspPoster localIspPosterFallback material-icons movie" aria-hidden="true"></span>';
-                const action = exists ? 'Already in Library' : item.mediaType === 'movie' ? 'Add & Play' : 'Add & Open';
+                const action = exists ? 'Already in Library' : 'Add & Play';
                 return `<div class="card overflowPortraitCard localIspRemoteCard" data-index="${index}">
                     <div class="cardBox cardBox-bottompadded"><div class="cardScalable"><div class="cardPadder cardPadder-overflowPortrait">${poster}</div></div>
                     <div class="cardText cardTextCentered">${escapeHtml(item.name)}</div><div class="cardText cardTextCentered localIspSource">${escapeHtml(item.source)}</div>
@@ -388,26 +388,42 @@ public sealed class ClientScriptController : ControllerBase
             }
 
             function renderRemoteResults(items) {
-                const section = document.querySelector('#localIspRemoteResults');
+                const seen = new Set();
+                nativeRemoteItems = items.filter((item) => {
+                    const key = normalizeTitle(item.name);
+                    return key && !seen.has(key) && seen.add(key);
+                });
+                renderCombinedResults();
+            }
+
+            function renderCombinedResults() {
+                const section = document.querySelector('#localIspCombinedResults');
                 if (!section) return;
-                const localTitles = localSearchTitles();
-                section.innerHTML = '<h2 class="sectionTitle sectionTitle-cards focuscontainer-x padded-left padded-right">Available from Media Servers</h2>'
-                    + (items.length ? `<div class="localIspRemoteGrid">${items.map((item, index) => remoteCard(item, index, localTitles.has(normalizeTitle(item.name)))).join('')}</div>`
-                        : '<div class="localIspSearchMessage">No matching titles were found on configured media servers.</div>');
-                section.querySelectorAll('.localIspAddButton:not([disabled])').forEach((button) => {
-                    button.addEventListener('click', () => addRemoteItem(items[Number(button.dataset.index)], button));
+                const localKeys = localSearchTitles();
+                const remoteOnly = nativeRemoteItems.filter((item) => !localKeys.has(normalizeTitle(item.name)));
+                const cards = nativeLocalItems.map(localCard).join('')
+                    + remoteOnly.map((item, index) => remoteCard(item, index, false)).join('');
+                section.innerHTML = '<h2 class="sectionTitle sectionTitle-cards focuscontainer-x padded-left padded-right">Search Results</h2>'
+                    + (cards ? `<div class="localIspRemoteGrid">${cards}</div>` : '<div class="localIspSearchMessage">No matching titles found.</div>');
+                section.querySelectorAll('.localIspOpenButton').forEach((button) => button.addEventListener('click', async () => {
+                    const item = await ApiClient.getItem(ApiClient.getCurrentUserId(), button.dataset.id);
+                    openIndexedItem(item);
+                }));
+                section.querySelectorAll('.localIspAddButton:not(.localIspOpenButton):not([disabled])').forEach((button) => {
+                    button.addEventListener('click', () => addRemoteItem(remoteOnly[Number(button.dataset.index)], button));
                 });
             }
 
             async function searchRemoteSources(query) {
                 const sequence = ++nativeSearchSequence;
-                const section = document.querySelector('#localIspRemoteResults');
+                const section = document.querySelector('#localIspCombinedResults');
                 if (!section) return;
                 if (query.length < 2) {
-                    section.innerHTML = '<h2 class="sectionTitle sectionTitle-cards focuscontainer-x padded-left padded-right">Available from Media Servers</h2><div class="localIspSearchMessage">Enter at least two characters to search configured FTP and HTTP servers.</div>';
+                    nativeLocalItems = []; nativeRemoteItems = []; nativeLocalTitles = new Set();
+                    section.innerHTML = '<h2 class="sectionTitle sectionTitle-cards focuscontainer-x padded-left padded-right">Search Results</h2><div class="localIspSearchMessage">Enter at least two characters to search your library and configured media servers.</div>';
                     return;
                 }
-                section.innerHTML = '<h2 class="sectionTitle sectionTitle-cards focuscontainer-x padded-left padded-right">Available from Media Servers</h2><div class="localIspSearchMessage">Searching media servers…</div>';
+                section.innerHTML = '<h2 class="sectionTitle sectionTitle-cards focuscontainer-x padded-left padded-right">Search Results</h2><div class="localIspSearchMessage">Searching your library and media servers…</div>';
                 const mediaTypes = ['movie', 'series', 'anime'];
                 const settled = await Promise.allSettled(mediaTypes.map((mediaType) => pluginCall('Remote/Search', 'POST', { mediaType, query })
                     .then((rows) => rows.map((row) => ({ name:value(row, 'Name'), url:value(row, 'Url'), source:value(row, 'Source'), posterUrl:value(row, 'PosterUrl'), mediaType })) )));
@@ -457,17 +473,8 @@ public sealed class ClientScriptController : ControllerBase
                 const original = label.textContent;
                 button.disabled = true;
                 try {
-                    const available = (await libraries()).filter((option) => option.mediaType === item.mediaType || (item.mediaType === 'anime' && option.mediaType === 'series'));
-                    if (!available.length) throw new Error('Create a compatible Jellyfin library before adding this title.');
-                    let destination = available[0];
-                    if (available.length > 1) {
-                        const answer = prompt('Choose the destination library:\n' + available.map((option, index) => `${index + 1}. ${option.name}`).join('\n'), '1');
-                        const selected = Number(answer) - 1;
-                        if (!Number.isInteger(selected) || !available[selected]) { button.disabled = false; return; }
-                        destination = available[selected];
-                    }
                     label.textContent = 'Adding…';
-                    await pluginCall('Add', 'POST', { url:item.url, libraryPath:destination.path, mediaType:item.mediaType, title:item.name });
+                    await pluginCall('Add', 'POST', { url:item.url, libraryPath:null, mediaType:item.mediaType, title:item.name });
                     label.textContent = 'Waiting for Jellyfin…';
                     const indexed = await waitForIndexedItem(item);
                     if (!indexed) { label.textContent = 'Added'; button.title = 'Jellyfin is still indexing this title.'; return; }
@@ -497,10 +504,12 @@ public sealed class ClientScriptController : ControllerBase
                         const query = input.value.trim();
                         if (query.length < 2) {
                             nativeLocalTitles = new Set();
-                            document.querySelector('#localIspLocalResults').innerHTML = '';
                             searchRemoteSources(query);
                             return;
                         }
+                        nativeLocalItems = [];
+                        nativeRemoteItems = [];
+                        nativeLocalTitles = new Set();
                         searchRemoteSources(query);
                         searchLocalLibrary(query, nativeSearchSequence);
                     }, 450);

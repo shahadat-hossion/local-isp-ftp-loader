@@ -3,12 +3,20 @@ namespace Jellyfin.Plugin.LinkAdder.Configuration;
 public sealed class PluginConfiguration : BasePluginConfiguration
 {
     public bool ReplaceDefaultSearch { get; set; } = true;
+    public SearchDestinationOptions SearchDestinations { get; set; } = new();
     public List<CustomSource> CustomSources { get; set; } = [];
     public List<MediaAddRequest> MediaRequests { get; set; } = [];
     public AutomationOptions Automation { get; set; } = new();
     public List<AutomationHistoryItem> AutomationHistory { get; set; } = [];
     public List<AutomationAddedItem> AutomationAddedItems { get; set; } = [];
     public List<string> AutomationExcludedIds { get; set; } = [];
+}
+
+public sealed class SearchDestinationOptions
+{
+    public string MovieLibraryPath { get; set; } = string.Empty;
+    public string SeriesLibraryPath { get; set; } = string.Empty;
+    public string AnimeLibraryPath { get; set; } = string.Empty;
 }
 
 public sealed class CustomSource

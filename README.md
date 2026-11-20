@@ -87,9 +87,13 @@ The plugin does not include provider-specific addresses. Each administrator supp
 
 1. Select the **Search & Add Media** icon in the Jellyfin web header or open **Add Media** from the Local ISP FTP Loader menu.
 2. Enter at least two characters from a movie, show, episode, or anime title.
-3. Review **In Your Library** first. Local results can be played or opened immediately.
-4. Review **Available from Media Servers** below it. Titles already present in Jellyfin are disabled automatically.
-5. Select **Add & Play** for a movie or **Add & Open** for a show or anime. If more than one compatible destination exists, choose the library when prompted.
+3. Review the single **Search Results** grid. Matching library items appear first, followed by titles available from configured media servers.
+4. Duplicate titles are collapsed into one card. Library items show **Play** (or **Open** for a series); titles not yet in Jellyfin show **Add & Play**.
+5. Select **Add & Play** to create the `.strm` in the configured default save location, refresh that library, and open the indexed title. No destination popup is shown.
+
+### Default save locations
+
+An administrator can open **FTP Servers** and assign one default Jellyfin library for Movies, Shows, and Anime. These shared defaults are used by Discover, home Search, Search Media, Import Link, Add Media, STRM creation, and downloads. Changing a default there changes the destination for every workflow.
 6. The plugin creates the lightweight `.strm` files, starts a Jellyfin scan, waits for the indexed item, and then plays the movie or opens the show. If indexing exceeds 90 seconds, it reports that the title was added and lets Jellyfin finish in the background.
 
 Administrators can expand **Search button settings** on the unified search page to keep Jellyfin's standard search button or replace it with the plugin search. The plugin search icon is always labelled **Search & Add Media** for accessibility.
@@ -103,7 +107,7 @@ The plugin adds a dedicated **Discover** page to Jellyfin's main sidebar. It dis
 - A [TMDb API key or read-access token](https://www.themoviedb.org/settings/api) for movie and series lists. The page includes a **Get TMDb API key** button that opens this official account page in a new tab.
 - Any combination of trending, new, and top-rated movies or series.
 - Trending anime from AniList; no AniList credential is required.
-- A run interval, per-category limit, minimum rating, minimum TMDb vote count, and destination libraries.
+- A run interval, per-category limit, minimum rating, and minimum TMDb vote count. Discover uses the shared Default Save Locations from the FTP Servers page.
 - **Preview only** mode to inspect exact matches without creating files.
 
 The discovery providers supply titles and metadata only. The plugin searches the configured private sources and creates `.strm` files only when one exact title/year match is found. Missing and ambiguous matches are skipped. Scheduled runs check every 15 minutes and execute when the configured interval is due.
@@ -150,7 +154,7 @@ Movies are placed in a title folder. Series keep useful remote subfolders such a
 </details>
 
 <details>
-<summary><strong>No destination library appears</strong></summary>
+<summary><strong>No default save location appears</strong></summary>
 
 - Create the Movies or Shows library in Jellyfin first.
 - Confirm that it has a local folder path writable by the Jellyfin process.
@@ -184,7 +188,7 @@ Restart Jellyfin, close and reopen **Add Media**, then hard-refresh the web clie
 - Source-management operations require Jellyfin administrator elevation.
 - Only loopback and private IPv4 source URLs are accepted.
 - A source URL must remain inside a configured private root.
-- A destination must match a current compatible Jellyfin library.
+- Configure Movies, Shows, and Anime under **FTP Servers → Default Save Locations**. Each destination must match a current compatible Jellyfin library.
 - Existing local files are not overwritten.
 - Actual media downloads require Jellyfin administrator elevation and can only target a current compatible library path.
 - FTP credentials remain in Jellyfin's plugin configuration.

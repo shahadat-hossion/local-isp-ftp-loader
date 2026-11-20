@@ -53,7 +53,7 @@ public sealed partial class AutomationService
                     ?? throw new InvalidOperationException("The selected title is no longer available in the search results.");
             }
 
-            var path = LibraryPath(configuration.Automation, title.MediaType);
+            var path = LibraryPath(configuration.SearchDestinations, title.MediaType);
             if (!IsCompatibleLibraryPath(path, title.MediaType))
                 return new(ToCandidate(title, "failed", "No compatible destination library is configured."), []);
 
@@ -131,7 +131,7 @@ public sealed partial class AutomationService
                         continue;
                     }
 
-                    var path = LibraryPath(options, title.MediaType);
+                    var path = LibraryPath(configuration.SearchDestinations, title.MediaType);
                     if (!IsCompatibleLibraryPath(path, title.MediaType))
                     {
                         results.Add(ToCandidate(title, "failed", "No compatible destination library is configured."));
@@ -250,7 +250,7 @@ public sealed partial class AutomationService
         });
     }
 
-    private static string LibraryPath(AutomationOptions options, string mediaType) => mediaType switch
+    private static string LibraryPath(SearchDestinationOptions options, string mediaType) => mediaType switch
     {
         "movie" => options.MovieLibraryPath,
         "series" => options.SeriesLibraryPath,
