@@ -34,6 +34,7 @@ public sealed class ClientScriptController : ControllerBase
 
             const buttonId = 'localIspFtpLoaderHeaderButton';
             const containerId = 'localIspFtpLoaderHeaderButtonContainer';
+            const userMenuItemId = 'localIspFtpLoaderUserMenuItem';
             const navigationStyleId = 'localIspFtpLoaderNavigationStyles';
             const addMediaRoute = '#/search';
             const discoverRoute = '#/configurationpage?name=localispdiscovery';
@@ -97,6 +98,46 @@ public sealed class ClientScriptController : ControllerBase
                     return;
                 }
                 window.location.hash = addMediaRoute;
+            }
+
+            function ensureUserMenuItem() {
+                const menu = document.getElementById('app-user-menu');
+                if (!menu || !isVisible(menu) || menu.querySelector(`#${userMenuItemId}`)) return;
+
+                const enhancedLabel = Array.from(menu.querySelectorAll('*')).find((element) =>
+                    element.children.length === 0 && element.textContent?.trim() === 'Jellyfin Enhanced');
+                const enhancedItem = enhancedLabel?.closest('[role="menuitem"], a, button, li');
+                if (!enhancedItem) return;
+
+                const item = enhancedItem.cloneNode(true);
+                item.id = userMenuItemId;
+                item.removeAttribute('href');
+                item.setAttribute('role', 'menuitem');
+                item.setAttribute('tabindex', '0');
+
+                const label = Array.from(item.querySelectorAll('*')).find((element) =>
+                    element.children.length === 0 && element.textContent?.trim() === 'Jellyfin Enhanced');
+                if (label) label.textContent = 'FTP Loader';
+
+                const icon = item.querySelector('svg, .material-icons');
+                if (icon) {
+                    const storageIcon = document.createElement('span');
+                    storageIcon.className = 'material-icons storage';
+                    storageIcon.setAttribute('aria-hidden', 'true');
+                    storageIcon.textContent = 'storage';
+                    icon.replaceWith(storageIcon);
+                }
+
+                const activate = (event) => {
+                    if (event.type === 'keydown' && event.key !== 'Enter' && event.key !== ' ') return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    document.querySelector('[aria-controls="app-user-menu"]')?.click();
+                    openAddMedia();
+                };
+                item.addEventListener('click', activate);
+                item.addEventListener('keydown', activate);
+                enhancedItem.insertAdjacentElement('afterend', item);
             }
 
             function createButton() {
@@ -430,6 +471,7 @@ public sealed class ClientScriptController : ControllerBase
                 requestAnimationFrame(() => {
                     scheduled = false;
                     ensureButton();
+                    ensureUserMenuItem();
                     applySearchReplacement();
                     ensureNavigationGroup();
                     attachNativeSearch();
