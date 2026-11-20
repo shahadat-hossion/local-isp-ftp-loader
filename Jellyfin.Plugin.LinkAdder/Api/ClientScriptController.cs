@@ -53,12 +53,6 @@ public sealed class ClientScriptController : ControllerBase
                     .localIspPluginGroup.localIspCollapsed .localIspPluginParent .material-icons:last-child { transform:rotate(-90deg); }
                     .localIspPluginChildren > a { padding-left:3.1rem!important; }
                     .localIspPluginGroup.localIspCollapsed .localIspPluginChildren { display:none; }
-                    .localIspToolsParent { display:flex;align-items:center;gap:.85rem;width:100%;padding:.8rem 1.05rem .8rem 3.1rem;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer; }
-                    .localIspToolsParent:hover { background:rgba(255,255,255,.06); }
-                    .localIspToolsParent .material-icons:last-child { margin-left:auto;transition:transform .2s ease; }
-                    .localIspToolsGroup.localIspToolsCollapsed .localIspToolsParent .material-icons:last-child { transform:rotate(-90deg); }
-                    .localIspToolsChildren > a { padding-left:5.15rem!important; }
-                    .localIspToolsGroup.localIspToolsCollapsed .localIspToolsChildren { display:none; }
                 `;
                 document.head.appendChild(style);
             }
@@ -68,43 +62,36 @@ public sealed class ClientScriptController : ControllerBase
                     link.getAttribute('href')?.toLowerCase().includes(`name=${routeName}`));
             }
 
-            function ensureMediaToolsSubmenu(pluginGroup) {
-                const addMedia = routeLink('localispmediaadd');
-                const ftpServers = routeLink('localispservers');
-                if (!addMedia || !ftpServers) return;
-
-                let toolsGroup = pluginGroup.querySelector('.localIspToolsGroup');
-                if (!toolsGroup) {
-                    toolsGroup = document.createElement('div');
-                    toolsGroup.className = 'localIspToolsGroup';
-                    const parent = document.createElement('button');
-                    parent.type = 'button';
-                    parent.className = 'localIspToolsParent';
-                    parent.setAttribute('aria-expanded', 'true');
-                    parent.innerHTML = '<span class="material-icons folder" aria-hidden="true"></span><span>Media Tools</span><span class="material-icons expand_more" aria-hidden="true"></span>';
-                    const children = document.createElement('div');
-                    children.className = 'localIspToolsChildren';
-                    parent.addEventListener('click', () => {
-                        const collapsed = toolsGroup.classList.toggle('localIspToolsCollapsed');
-                        parent.setAttribute('aria-expanded', String(!collapsed));
-                    });
-                    pluginGroup.querySelector('.localIspPluginChildren')?.appendChild(toolsGroup);
-                    toolsGroup.append(parent, children);
+            function createSubmenuLink(template, id, routeName, label, iconName) {
+                const link = template.cloneNode(true);
+                link.id = id;
+                link.setAttribute('href', `#/configurationpage?name=${routeName}`);
+                const labelNode = Array.from(link.querySelectorAll('*')).find((element) =>
+                    element.children.length === 0 && ['Discover', 'Import Link'].includes(element.textContent?.trim()));
+                if (labelNode) labelNode.textContent = label;
+                else link.appendChild(Object.assign(document.createElement('span'), { textContent: label }));
+                const icon = link.querySelector('.material-icons');
+                if (icon) {
+                    icon.className = `material-icons ${iconName}`;
+                    icon.textContent = '';
                 }
+                return link;
+            }
 
-                const children = toolsGroup.querySelector('.localIspToolsChildren');
-                if (!children) return;
-                if (!children.contains(addMedia)) children.appendChild(addMedia);
-                if (!children.contains(ftpServers)) children.appendChild(ftpServers);
+            function ensureManagedSubmenuLinks(children, template) {
+                if (!children.querySelector('#localIspAddMediaMenuLink')) {
+                    children.appendChild(createSubmenuLink(template, 'localIspAddMediaMenuLink', 'localispmediaadd', 'Add Media', 'add'));
+                }
+                if (!children.querySelector('#localIspFtpServersMenuLink')) {
+                    children.appendChild(createSubmenuLink(template, 'localIspFtpServersMenuLink', 'localispservers', 'FTP Servers', 'storage'));
+                }
             }
 
             function ensureNavigationGroup() {
                 ensureNavigationStyles();
                 const links = [
                     routeLink('localispdiscovery'),
-                    routeLink('localispimportlink'),
-                    routeLink('localispmediaadd'),
-                    routeLink('localispservers')
+                    routeLink('localispimportlink')
                 ].filter(Boolean);
                 if (links.length < 2) return;
 
@@ -115,7 +102,7 @@ public sealed class ClientScriptController : ControllerBase
                     for (const link of links) {
                         if (!children.contains(link)) children.appendChild(link);
                     }
-                    ensureMediaToolsSubmenu(existingGroup);
+                    ensureManagedSubmenuLinks(children, links[0]);
                     return;
                 }
 
@@ -128,7 +115,7 @@ public sealed class ClientScriptController : ControllerBase
                 parent.type = 'button';
                 parent.className = 'localIspPluginParent';
                 parent.setAttribute('aria-expanded', 'true');
-                parent.innerHTML = '<span class="material-icons storage" aria-hidden="true"></span><span>Local ISP FTP Loader</span><span class="material-icons expand_more" aria-hidden="true"></span>';
+                parent.innerHTML = '<span class="material-icons storage" aria-hidden="true"></span><span>FTP Loader</span><span class="material-icons expand_more" aria-hidden="true"></span>';
                 const children = document.createElement('div');
                 children.className = 'localIspPluginChildren';
                 parent.addEventListener('click', () => {
@@ -138,7 +125,7 @@ public sealed class ClientScriptController : ControllerBase
                 navigation.insertBefore(group, links[0]);
                 group.append(parent, children);
                 children.append(...links);
-                ensureMediaToolsSubmenu(group);
+                ensureManagedSubmenuLinks(children, links[0]);
             }
 
             function isVisible(element) {

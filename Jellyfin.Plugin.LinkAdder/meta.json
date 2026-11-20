@@ -1,6 +1,6 @@
 {
   "category": "General",
-  "changelog": "Place Add Media and FTP Servers inside a dedicated nested Media Tools submenu, with administrator-only server testing, JSON export, and merge import.",
+  "changelog": "Keep Add Media and FTP Servers exclusively inside the renamed FTP Loader submenu instead of registering them as standalone Jellyfin menu pages.",
   "description": "Search user-configured local ISP media servers, add STRM entries, or download media to Jellyfin storage.",
   "guid": "9399b942-4b6d-46a7-9a5d-a01764f7ee6a",
   "name": "Local ISP FTP Loader",
@@ -8,7 +8,7 @@
   "owner": "shahadat-hossion",
   "targetAbi": "12.0.0.0",
   "timestamp": "2026-11-20T00:00:00Z",
-  "version": "2.7.1.0",
+  "version": "2.7.2.0",
   "status": "Active",
   "autoUpdate": false,
   "assemblies": []

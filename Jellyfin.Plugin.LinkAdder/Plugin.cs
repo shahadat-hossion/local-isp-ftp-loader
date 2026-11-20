@@ -16,8 +16,8 @@ public sealed class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     [
         new() { Name="localispdiscovery", EmbeddedResourcePath="Jellyfin.Plugin.LinkAdder.Configuration.discoveryPage.html", EnableInMainMenu=true, DisplayName="Discover", MenuSection="main", MenuIcon="explore" },
         new() { Name="localispsearch", EmbeddedResourcePath="Jellyfin.Plugin.LinkAdder.Configuration.searchPage.html", EnableInMainMenu=false, DisplayName="Search & Add", MenuSection="main", MenuIcon="search" },
-        new() { Name="localispmediaadd", EmbeddedResourcePath="Jellyfin.Plugin.LinkAdder.Configuration.configPage.html", EnableInMainMenu=true, DisplayName="Add Media", MenuSection="main", MenuIcon="add" },
-        new() { Name="localispservers", EmbeddedResourcePath="Jellyfin.Plugin.LinkAdder.Configuration.serverPage.html", EnableInMainMenu=true, DisplayName="FTP Servers", MenuSection="main", MenuIcon="storage" },
+        new() { Name="localispmediaadd", EmbeddedResourcePath="Jellyfin.Plugin.LinkAdder.Configuration.configPage.html", EnableInMainMenu=false, DisplayName="Add Media", MenuSection="main", MenuIcon="add" },
+        new() { Name="localispservers", EmbeddedResourcePath="Jellyfin.Plugin.LinkAdder.Configuration.serverPage.html", EnableInMainMenu=false, DisplayName="FTP Servers", MenuSection="main", MenuIcon="storage" },
         new() { Name="localispimportlink", EmbeddedResourcePath="Jellyfin.Plugin.LinkAdder.Configuration.importLinkPage.html", EnableInMainMenu=true, DisplayName="Import Link", MenuSection="main", MenuIcon="link" }
     ];
 }
