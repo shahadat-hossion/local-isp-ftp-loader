@@ -179,6 +179,65 @@ public sealed class LinkAdderController : ControllerBase
         return Ok(items);
     }
 
+    [HttpGet("Sources/Export")]
+    [Authorize(Policy = Policies.RequiresElevation)]
+    public ActionResult<SourceExportFile> ExportSources([FromQuery] bool includeCredentials = false)
+    {
+        var sources = (Plugin.Instance?.Configuration.CustomSources ?? [])
+            .OrderBy(x => x.Name)
+            .Select(x => new SourceTransferItem(x.Name, x.Url, x.MediaType,
+                includeCredentials ? x.Username : null,
+                includeCredentials ? x.Password : null))
+            .ToArray();
+        return Ok(new SourceExportFile(1, DateTime.UtcNow, sources));
+    }
+
+    [HttpPost("Sources/Import")]
+    [Authorize(Policy = Policies.RequiresElevation)]
+    public ActionResult<SourceImportResult> ImportSources([FromBody] SourceExportFile import)
+    {
+        if (import.Version != 1) return BadRequest(new { error = "This source export version is not supported." });
+        if (import.Sources is null) return BadRequest(new { error = "The import file does not contain a sources list." });
+        if (import.Sources.Count > 500) return BadRequest(new { error = "An import file can contain at most 500 sources." });
+
+        var validated = new List<CustomSource>(import.Sources.Count);
+        for (var index = 0; index < import.Sources.Count; index++)
+        {
+            var item = import.Sources[index];
+            var name = (item.Name ?? string.Empty).Trim();
+            if (name.Length < 2) return BadRequest(new { error = $"Source {index + 1} has an invalid name." });
+            try
+            {
+                validated.Add(new CustomSource
+                {
+                    Name = name,
+                    Url = EnsureDirectoryUrl(ValidateLocalSource(item.Url)).AbsoluteUri,
+                    MediaType = NormalizeSourceMediaType(item.MediaType),
+                    Username = (item.Username ?? string.Empty).Trim(),
+                    Password = item.Password ?? string.Empty
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = $"Source {index + 1} ({name}) is invalid: {ex.Message}" });
+            }
+        }
+
+        var imported = 0;
+        lock (ConfigurationLock)
+        {
+            var configuration = Plugin.Instance?.Configuration ?? throw new InvalidOperationException("Plugin configuration is unavailable.");
+            foreach (var source in validated)
+            {
+                if (configuration.CustomSources.Any(x => x.Url.Equals(source.Url, StringComparison.OrdinalIgnoreCase) && x.MediaType == source.MediaType)) continue;
+                configuration.CustomSources.Add(source);
+                imported++;
+            }
+            if (imported > 0) Plugin.Instance!.UpdateConfiguration(configuration);
+        }
+        return Ok(new SourceImportResult(imported, validated.Count - imported, validated.Count));
+    }
+
     [HttpPost("Sources/TestAll")]
     [Authorize(Policy = Policies.RequiresElevation)]
     public async Task<ActionResult<IReadOnlyList<SavedSourceTestResult>>> TestAllSources(CancellationToken ct)

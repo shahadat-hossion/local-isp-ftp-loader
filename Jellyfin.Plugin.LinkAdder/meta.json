@@ -1,6 +1,6 @@
 {
   "category": "General",
-  "changelog": "Add a dedicated Import Link page and separate it from the streamlined Search Media workflow.",
+  "changelog": "Add dedicated Add Media and FTP Servers tools under the Local ISP FTP Loader submenu, including administrator-only server testing, JSON export, and merge import.",
   "description": "Search user-configured local ISP media servers, add STRM entries, or download media to Jellyfin storage.",
   "guid": "9399b942-4b6d-46a7-9a5d-a01764f7ee6a",
   "name": "Local ISP FTP Loader",

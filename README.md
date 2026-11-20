@@ -33,6 +33,7 @@ By default, the plugin creates small `.strm` pointer files and playback continue
 - Preserve season subfolders and remote series structure where available.
 - Skip existing destination files instead of overwriting them.
 - Test one source or all configured sources from the plugin page.
+- Export all configured sources to a portable JSON file and import them on another server. Credentials are excluded by default and can be included explicitly.
 - Use optional FTP credentials stored in Jellyfin's plugin configuration.
 - Let regular signed-in users search and add media while keeping source management administrator-only.
 - Discover trending, new, and top-rated movies or series through TMDb.
@@ -72,12 +73,11 @@ If the plugin is missing from the catalog, open the manifest URL from the Jellyf
 
 An administrator performs this once for each server:
 
-1. Open **Add Media** from Jellyfin's main menu.
-2. Expand **Add local ISP FTP link** at the bottom of the page.
-3. Enter a display name, media type, and complete `ftp://`, `http://`, or `https://` directory URL.
-4. Add FTP credentials if the server requires them.
-5. Select **Test connection**.
-6. Select **Add source** after the test succeeds.
+1. Open **FTP Servers** from the Local ISP FTP Loader menu.
+2. Enter a display name, media type, and complete `ftp://`, `http://`, or `https://` directory URL.
+3. Add FTP credentials if the server requires them.
+4. Select **Test connection**.
+5. Select **Add server** after the test succeeds.
 
 Choose **Movies & TV Series (Both)** when one server contains both categories. Source configuration, connection tests, saved credentials, and source removal are visible only to Jellyfin administrators.
 
@@ -85,7 +85,7 @@ The plugin does not include provider-specific addresses. Each administrator supp
 
 ## Search and add media
 
-1. Select the **Search & Add Media** icon in the Jellyfin web header or open **Search & Add** from the plugin menu.
+1. Select the **Search & Add Media** icon in the Jellyfin web header or open **Add Media** from the Local ISP FTP Loader menu.
 2. Enter at least two characters from a movie, show, episode, or anime title.
 3. Review **In Your Library** first. Local results can be played or opened immediately.
 4. Review **Available from Media Servers** below it. Titles already present in Jellyfin are disabled automatically.

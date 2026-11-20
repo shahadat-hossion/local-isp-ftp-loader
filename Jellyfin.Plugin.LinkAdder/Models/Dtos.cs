@@ -15,6 +15,9 @@ public sealed record TestSourceRequest(string Url, string? Username, string? Pas
 public sealed record TestSourceResult(bool Success, int Entries, string Message);
 public sealed record SavedSourceTestResult(string Id, bool Success, int Entries, string Message);
 public sealed record CustomSourceView(string Id, string Name, string Url, string MediaType, bool HasCredentials);
+public sealed record SourceTransferItem(string Name, string Url, string MediaType, string? Username, string? Password);
+public sealed record SourceExportFile(int Version, DateTime ExportedAtUtc, IReadOnlyList<SourceTransferItem> Sources);
+public sealed record SourceImportResult(int Imported, int Skipped, int Total);
 public sealed record SubmitMediaRequest(string Url, string MediaType, string? Title);
 public sealed record MediaRequestView(string Id, string RequestedBy, string Title, string Url, string MediaType, DateTime RequestedAtUtc);
 public sealed record AutomationSettingsRequest(bool Enabled, bool PreviewOnly, string? TmdbCredential, bool TrendingMovies, bool NewMovies, bool TopMovies, bool TrendingSeries, bool NewSeries, bool TopSeries, bool TrendingAnime, int IntervalHours, int MaxPerCategory, double MinimumRating, int MinimumVotes, string? MovieLibraryPath, string? SeriesLibraryPath, string? AnimeLibraryPath);
