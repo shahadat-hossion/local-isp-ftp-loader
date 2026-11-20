@@ -53,6 +53,12 @@ public sealed class ClientScriptController : ControllerBase
                     .localIspPluginGroup.localIspCollapsed .localIspPluginParent .material-icons:last-child { transform:rotate(-90deg); }
                     .localIspPluginChildren > a { padding-left:3.1rem!important; }
                     .localIspPluginGroup.localIspCollapsed .localIspPluginChildren { display:none; }
+                    .localIspToolsParent { display:flex;align-items:center;gap:.85rem;width:100%;padding:.8rem 1.05rem .8rem 3.1rem;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer; }
+                    .localIspToolsParent:hover { background:rgba(255,255,255,.06); }
+                    .localIspToolsParent .material-icons:last-child { margin-left:auto;transition:transform .2s ease; }
+                    .localIspToolsGroup.localIspToolsCollapsed .localIspToolsParent .material-icons:last-child { transform:rotate(-90deg); }
+                    .localIspToolsChildren > a { padding-left:5.15rem!important; }
+                    .localIspToolsGroup.localIspToolsCollapsed .localIspToolsChildren { display:none; }
                 `;
                 document.head.appendChild(style);
             }
@@ -60,6 +66,36 @@ public sealed class ClientScriptController : ControllerBase
             function routeLink(routeName) {
                 return Array.from(document.querySelectorAll('a[href]')).find((link) =>
                     link.getAttribute('href')?.toLowerCase().includes(`name=${routeName}`));
+            }
+
+            function ensureMediaToolsSubmenu(pluginGroup) {
+                const addMedia = routeLink('localispmediaadd');
+                const ftpServers = routeLink('localispservers');
+                if (!addMedia || !ftpServers) return;
+
+                let toolsGroup = pluginGroup.querySelector('.localIspToolsGroup');
+                if (!toolsGroup) {
+                    toolsGroup = document.createElement('div');
+                    toolsGroup.className = 'localIspToolsGroup';
+                    const parent = document.createElement('button');
+                    parent.type = 'button';
+                    parent.className = 'localIspToolsParent';
+                    parent.setAttribute('aria-expanded', 'true');
+                    parent.innerHTML = '<span class="material-icons folder" aria-hidden="true"></span><span>Media Tools</span><span class="material-icons expand_more" aria-hidden="true"></span>';
+                    const children = document.createElement('div');
+                    children.className = 'localIspToolsChildren';
+                    parent.addEventListener('click', () => {
+                        const collapsed = toolsGroup.classList.toggle('localIspToolsCollapsed');
+                        parent.setAttribute('aria-expanded', String(!collapsed));
+                    });
+                    pluginGroup.querySelector('.localIspPluginChildren')?.appendChild(toolsGroup);
+                    toolsGroup.append(parent, children);
+                }
+
+                const children = toolsGroup.querySelector('.localIspToolsChildren');
+                if (!children) return;
+                if (!children.contains(addMedia)) children.appendChild(addMedia);
+                if (!children.contains(ftpServers)) children.appendChild(ftpServers);
             }
 
             function ensureNavigationGroup() {
@@ -79,6 +115,7 @@ public sealed class ClientScriptController : ControllerBase
                     for (const link of links) {
                         if (!children.contains(link)) children.appendChild(link);
                     }
+                    ensureMediaToolsSubmenu(existingGroup);
                     return;
                 }
 
@@ -101,6 +138,7 @@ public sealed class ClientScriptController : ControllerBase
                 navigation.insertBefore(group, links[0]);
                 group.append(parent, children);
                 children.append(...links);
+                ensureMediaToolsSubmenu(group);
             }
 
             function isVisible(element) {
