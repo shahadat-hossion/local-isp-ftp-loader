@@ -64,13 +64,27 @@ public sealed class ClientScriptController : ControllerBase
 
             function ensureNavigationGroup() {
                 ensureNavigationStyles();
-                const discover = routeLink('localispdiscovery');
-                const importLink = routeLink('localispimportlink');
-                if (!discover || !importLink) return;
-                if (discover.closest('.localIspPluginGroup') && importLink.closest('.localIspPluginGroup')) return;
-                if (discover.parentElement !== importLink.parentElement) return;
+                const links = [
+                    routeLink('localispdiscovery'),
+                    routeLink('localispimportlink'),
+                    routeLink('localispmediaadd'),
+                    routeLink('localispservers')
+                ].filter(Boolean);
+                if (links.length < 2) return;
 
-                const navigation = discover.parentElement;
+                const existingGroup = links.map((link) => link.closest('.localIspPluginGroup')).find(Boolean);
+                if (existingGroup) {
+                    const children = existingGroup.querySelector('.localIspPluginChildren');
+                    if (!children) return;
+                    for (const link of links) {
+                        if (!children.contains(link)) children.appendChild(link);
+                    }
+                    return;
+                }
+
+                const navigation = links[0].parentElement;
+                if (!navigation || links.some((link) => link.parentElement !== navigation)) return;
+
                 const group = document.createElement('div');
                 group.className = 'localIspPluginGroup';
                 const parent = document.createElement('button');
@@ -84,9 +98,9 @@ public sealed class ClientScriptController : ControllerBase
                     const collapsed = group.classList.toggle('localIspCollapsed');
                     parent.setAttribute('aria-expanded', String(!collapsed));
                 });
-                navigation.insertBefore(group, discover);
+                navigation.insertBefore(group, links[0]);
                 group.append(parent, children);
-                children.append(discover, importLink);
+                children.append(...links);
             }
 
             function isVisible(element) {
