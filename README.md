@@ -1,7 +1,7 @@
 # Media Source Bridge for Jellyfin
 
 <p align="center">
-  <img src="assets/media-source-bridge-logo.png" alt="Media Source Bridge for Jellyfin" width="220">
+  <img src="assets/github-preview.jpg" alt="Media Source Bridge for Jellyfin banner featuring a blue-lit cinema">
 </p>
 
 <p align="center">
