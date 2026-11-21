@@ -50,93 +50,6 @@ public sealed class ClientScriptController : ControllerBase
             const discoverRoute = '#/configurationpage?name=localispdiscovery';
             let replaceDefaultSearch = null;
 
-            function ensureNavigationStyles() {
-                if (document.getElementById(navigationStyleId)) return;
-                const style = document.createElement('style');
-                style.id = navigationStyleId;
-                style.textContent = `
-                    .localIspPluginGroup { margin: .35rem 0; }
-                    .localIspPluginParent { display:flex;align-items:center;gap:.85rem;width:100%;padding:.8rem 1.05rem;border:0;background:transparent;color:inherit;font:inherit;font-weight:600;text-align:left;cursor:pointer; }
-                    .localIspPluginParent:hover { background:rgba(255,255,255,.06); }
-                    .localIspPluginParent .material-icons:last-child { margin-left:auto;transition:transform .2s ease; }
-                    .localIspPluginGroup.localIspCollapsed .localIspPluginParent .material-icons:last-child { transform:rotate(-90deg); }
-                    .localIspPluginChildren > a { padding-left:3.1rem!important; }
-                    .localIspPluginGroup.localIspCollapsed .localIspPluginChildren { display:none; }
-                `;
-                document.head.appendChild(style);
-            }
-
-            function routeLink(routeName) {
-                return Array.from(document.querySelectorAll('a[href]')).find((link) =>
-                    link.getAttribute('href')?.toLowerCase().includes(`name=${routeName}`));
-            }
-
-            function createSubmenuLink(template, id, routeName, label, iconName) {
-                const link = template.cloneNode(true);
-                link.id = id;
-                link.setAttribute('href', `#/configurationpage?name=${routeName}`);
-                const labelNode = Array.from(link.querySelectorAll('*')).find((element) =>
-                    element.children.length === 0 && ['Discover', 'Import Link'].includes(element.textContent?.trim()));
-                if (labelNode) labelNode.textContent = label;
-                else link.appendChild(Object.assign(document.createElement('span'), { textContent: label }));
-                const icon = link.querySelector('.material-icons');
-                if (icon) {
-                    icon.className = `material-icons ${iconName}`;
-                    icon.textContent = '';
-                }
-                return link;
-            }
-
-            function ensureManagedSubmenuLinks(children, template) {
-                if (!children.querySelector('#localIspAddMediaMenuLink')) {
-                    children.appendChild(createSubmenuLink(template, 'localIspAddMediaMenuLink', 'localispmediaadd', 'Add Media', 'add'));
-                }
-                if (!children.querySelector('#localIspFtpServersMenuLink')) {
-                    children.appendChild(createSubmenuLink(template, 'localIspFtpServersMenuLink', 'localispservers', 'Media Sources', 'storage'));
-                }
-            }
-
-            function ensureNavigationGroup() {
-                ensureNavigationStyles();
-                const links = [
-                    routeLink('localispdiscovery'),
-                    routeLink('localispimportlink')
-                ].filter(Boolean);
-                if (links.length < 2) return;
-
-                const existingGroup = links.map((link) => link.closest('.localIspPluginGroup')).find(Boolean);
-                if (existingGroup) {
-                    const children = existingGroup.querySelector('.localIspPluginChildren');
-                    if (!children) return;
-                    for (const link of links) {
-                        if (!children.contains(link)) children.appendChild(link);
-                    }
-                    ensureManagedSubmenuLinks(children, links[0]);
-                    return;
-                }
-
-                const navigation = links[0].parentElement;
-                if (!navigation || links.some((link) => link.parentElement !== navigation)) return;
-
-                const group = document.createElement('div');
-                group.className = 'localIspPluginGroup';
-                const parent = document.createElement('button');
-                parent.type = 'button';
-                parent.className = 'localIspPluginParent';
-                parent.setAttribute('aria-expanded', 'true');
-                parent.innerHTML = '<span class="material-icons storage" aria-hidden="true"></span><span>Media Source Bridge</span><span class="material-icons expand_more" aria-hidden="true"></span>';
-                const children = document.createElement('div');
-                children.className = 'localIspPluginChildren';
-                parent.addEventListener('click', () => {
-                    const collapsed = group.classList.toggle('localIspCollapsed');
-                    parent.setAttribute('aria-expanded', String(!collapsed));
-                });
-                navigation.insertBefore(group, links[0]);
-                group.append(parent, children);
-                children.append(...links);
-                ensureManagedSubmenuLinks(children, links[0]);
-            }
-
             function isVisible(element) {
                 return Boolean(element && element.isConnected && element.getClientRects().length);
             }
@@ -522,7 +435,6 @@ public sealed class ClientScriptController : ControllerBase
                     ensureButton();
                     ensureUserMenuItem();
                     applySearchReplacement();
-                    ensureNavigationGroup();
                     attachNativeSearch();
                 });
             };

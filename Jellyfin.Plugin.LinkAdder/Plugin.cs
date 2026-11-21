@@ -14,10 +14,19 @@ public sealed class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     public Plugin(IApplicationPaths paths, IXmlSerializer serializer) : base(paths, serializer) => Instance = this;
     public IEnumerable<PluginPageInfo> GetPages() =>
     [
-        new() { Name="localispdiscovery", EmbeddedResourcePath="Jellyfin.Plugin.LinkAdder.Configuration.discoveryPage.html", EnableInMainMenu=true, DisplayName="Discover", MenuSection="main", MenuIcon="explore" },
-        new() { Name="localispsearch", EmbeddedResourcePath="Jellyfin.Plugin.LinkAdder.Configuration.searchPage.html", EnableInMainMenu=false, DisplayName="Search & Add", MenuSection="main", MenuIcon="search" },
-        new() { Name="localispmediaadd", EmbeddedResourcePath="Jellyfin.Plugin.LinkAdder.Configuration.configPage.html", EnableInMainMenu=false, DisplayName="Add Media", MenuSection="main", MenuIcon="add" },
-        new() { Name="localispservers", EmbeddedResourcePath="Jellyfin.Plugin.LinkAdder.Configuration.serverPage.html", EnableInMainMenu=false, DisplayName="Media Sources", MenuSection="main", MenuIcon="storage" },
-        new() { Name="localispimportlink", EmbeddedResourcePath="Jellyfin.Plugin.LinkAdder.Configuration.importLinkPage.html", EnableInMainMenu=true, DisplayName="Import Link", MenuSection="main", MenuIcon="link" }
+        new()
+        {
+            Name = "localispplugins",
+            EmbeddedResourcePath = "Jellyfin.Plugin.LinkAdder.Configuration.pluginsPage.html",
+            EnableInMainMenu = true,
+            DisplayName = "Media Source Bridge",
+            MenuSection = "main",
+            MenuIcon = "extension"
+        },
+        new() { Name = "localispdiscovery", EmbeddedResourcePath = "Jellyfin.Plugin.LinkAdder.Configuration.discoveryPage.html" },
+        new() { Name = "localispsearch", EmbeddedResourcePath = "Jellyfin.Plugin.LinkAdder.Configuration.searchPage.html" },
+        new() { Name = "localispmediaadd", EmbeddedResourcePath = "Jellyfin.Plugin.LinkAdder.Configuration.configPage.html" },
+        new() { Name = "localispservers", EmbeddedResourcePath = "Jellyfin.Plugin.LinkAdder.Configuration.serverPage.html" },
+        new() { Name = "localispimportlink", EmbeddedResourcePath = "Jellyfin.Plugin.LinkAdder.Configuration.importLinkPage.html" }
     ];
 }

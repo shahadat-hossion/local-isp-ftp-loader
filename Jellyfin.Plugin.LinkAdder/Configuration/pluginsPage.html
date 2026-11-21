@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head><title>Media Source Bridge</title></head>
+<body>
+<div id="LocalIspPluginsPage" data-role="page" class="page type-interior">
+    <div data-role="content">
+        <div class="content-primary">
+            <h2>Media Source Bridge</h2>
+            <nav aria-label="Media Source Bridge pages" class="linkAdderPageLinks">
+                <a href="#/configurationpage?name=localispdiscovery">Discover</a>
+                <a href="#/configurationpage?name=localispimportlink">Import Link</a>
+                <a href="#/configurationpage?name=localispsearch">Search &amp; Add</a>
+                <a href="#/configurationpage?name=localispmediaadd">Add Media</a>
+                <a href="#/configurationpage?name=localispservers" hidden>Media Sources</a>
+            </nav>
+        </div>
+    </div>
+    <style>
+        #LocalIspPluginsPage .linkAdderPageLinks {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+            gap: .75rem;
+            max-width: 54rem;
+        }
+        #LocalIspPluginsPage .linkAdderPageLinks a {
+            padding: 1rem;
+            border-radius: .4rem;
+            background: rgba(128, 128, 128, .16);
+            color: inherit;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        #LocalIspPluginsPage .linkAdderPageLinks a:hover,
+        #LocalIspPluginsPage .linkAdderPageLinks a:focus-visible {
+            background: rgba(128, 128, 128, .32);
+        }
+    </style>
+    <script type="text/javascript">
+        (() => {
+            const page = document.querySelector('#LocalIspPluginsPage');
+            const mediaSources = page.querySelector('a[href$="name=localispservers"]');
+
+            async function updateMediaSourcesLink() {
+                mediaSources.hidden = true;
+                try {
+                    await ApiClient.ajax({
+                        url: ApiClient.getUrl('Plugins/LinkAdder/CanManage'),
+                        type: 'GET',
+                        dataType: 'json'
+                    });
+                    mediaSources.hidden = false;
+                } catch {
+                    // Media Sources requires administrator access.
+                }
+            }
+
+            page.addEventListener('viewshow', updateMediaSourcesLink);
+            page.addEventListener('pageshow', updateMediaSourcesLink);
+            updateMediaSourcesLink();
+        })();
+    </script>
+</div>
+</body>
+</html>

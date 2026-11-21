@@ -104,7 +104,7 @@ Jellyfin handles metadata, artwork, transcoding, and playback normally. The remo
 
 ## Automatic discovery
 
-The plugin adds a dedicated **Discover** page to Jellyfin's main sidebar. It displays responsive Movies, Shows, and Anime grids for signed-in users, with animated skeleton cards and progress indicators during API and private-server operations. Administrators can expand **Automation settings** on that page and configure:
+Open **Media Source Bridge** in Jellyfin's sidebar to find **Discover**, **Import Link**, **Search & Add**, **Add Media**, and administrator-only **Media Sources**. Discover displays responsive Movies, Shows, and Anime grids for signed-in users, with animated skeleton cards and progress indicators during API and private-server operations. Administrators can expand **Automation settings** on that page and configure:
 
 - A [TMDb API key or read-access token](https://www.themoviedb.org/settings/api) for movie and series lists. The page includes a **Get TMDb API key** button that opens this official account page in a new tab.
 - Any combination of trending, new, and top-rated movies or series.
