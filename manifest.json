@@ -9,6 +9,14 @@
     "overview": "Search private media sources and add streams or download media to Jellyfin libraries.",
     "versions": [
       {
+        "version": "2.7.7.0",
+        "changelog": "Expand or collapse Discover, Search, Import Link, and Setup Media directly from Media Source Bridge. Keep the four shortcuts on the landing page.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/shahadat-hossion/media-source-bridge/releases/download/v2.7.7/Media-Source-Bridge-2.7.7.zip",
+        "checksum": "0948bccf26a6a9e83aaec712a2f06539",
+        "timestamp": "2026-11-21T11:52:46Z"
+      },
+      {
         "version": "2.7.6.0",
         "changelog": "Group all Media Source Bridge pages under one Jellyfin sidebar entry.",
         "targetAbi": "12.0.0.0",
