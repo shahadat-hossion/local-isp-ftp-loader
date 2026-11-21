@@ -60,7 +60,7 @@ Supported video extensions include `.mkv`, `.mp4`, `.avi`, `.mov`, `.m4v`, `.ts`
 4. Paste this manifest URL:
 
    ```text
-   https://raw.githubusercontent.com/shahadat-hossion/media-source-bridge/refs/heads/main/manifest.json
+   https://raw.githubusercontent.com/shahadat-hossion/media-source-bridge/main/manifest.json
    ```
 
 5. Save, then open **Dashboard > Plugins > Catalog**.
