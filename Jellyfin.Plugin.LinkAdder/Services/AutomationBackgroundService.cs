@@ -24,7 +24,7 @@ public sealed class AutomationBackgroundService : BackgroundService
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Local ISP FTP Loader search-index warmup failed.");
+            _logger.LogWarning(ex, "Media Source Bridge search-index warmup failed.");
         }
         await Task.Delay(TimeSpan.FromSeconds(110), stoppingToken).ConfigureAwait(false);
         while (!stoppingToken.IsCancellationRequested)
@@ -38,7 +38,7 @@ public sealed class AutomationBackgroundService : BackgroundService
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Local ISP FTP Loader automation run failed.");
+                _logger.LogError(ex, "Media Source Bridge automation run failed.");
             }
             await Task.Delay(TimeSpan.FromMinutes(15), stoppingToken).ConfigureAwait(false);
         }

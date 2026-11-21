@@ -123,7 +123,7 @@ public sealed class LinkAdderController : ControllerBase
                 : compatible.FirstOrDefault(x => Path.TrimEndingDirectorySeparator(x.Path).Equals(
                     Path.TrimEndingDirectorySeparator(Path.GetFullPath(configuredPath)), StringComparison.OrdinalIgnoreCase));
             if (option is null)
-                return BadRequest(new { error = $"Set the {mediaType} default save location on the FTP Servers page." });
+                return BadRequest(new { error = $"Set the {mediaType} default save location on the Media Sources page." });
 
             var preview = await _service.PreviewAsync(request.Url, mediaType, request.Title, ct).ConfigureAwait(false);
             var addLock = AddLocks.GetOrAdd($"{option.Path}\n{preview.Title}", _ => new SemaphoreSlim(1, 1));
@@ -162,7 +162,7 @@ public sealed class LinkAdderController : ControllerBase
         var configuredPath = DefaultLibraryPath(mediaType);
         var requestedPath = string.IsNullOrWhiteSpace(configuredPath) ? string.Empty : Path.GetFullPath(configuredPath);
         var option = LibrariesForValidation().FirstOrDefault(x => x.MediaType == mediaType && x.Path.Equals(requestedPath, StringComparison.OrdinalIgnoreCase));
-        if (option is null) return BadRequest(new { error = $"Set the {mediaType} default save location on the FTP Servers page." });
+        if (option is null) return BadRequest(new { error = $"Set the {mediaType} default save location on the Media Sources page." });
         var preview = await _service.PreviewAsync(request.Url, request.MediaType, request.Title, ct).ConfigureAwait(false);
         var result = await _service.DownloadAsync(preview, option.Path, ct).ConfigureAwait(false);
         _ = Task.Run(() => _library.ValidateMediaLibrary(new Progress<double>(), CancellationToken.None));
@@ -177,7 +177,7 @@ public sealed class LinkAdderController : ControllerBase
         var configuredPath = DefaultLibraryPath(mediaType);
         var requestedPath = string.IsNullOrWhiteSpace(configuredPath) ? string.Empty : Path.GetFullPath(configuredPath);
         var option = LibrariesForValidation().FirstOrDefault(x => x.MediaType == mediaType && x.Path.Equals(requestedPath, StringComparison.OrdinalIgnoreCase));
-        if (option is null) return BadRequest(new { error = $"Set the {mediaType} default save location on the FTP Servers page." });
+        if (option is null) return BadRequest(new { error = $"Set the {mediaType} default save location on the Media Sources page." });
         foreach (var expired in DownloadJobs.Where(x => x.Value.UpdatedUtc < DateTime.UtcNow.AddHours(-12)).Select(x => x.Key).ToArray()) DownloadJobs.TryRemove(expired, out _);
         var id = Guid.NewGuid().ToString("N");
         var job = new DownloadJob();

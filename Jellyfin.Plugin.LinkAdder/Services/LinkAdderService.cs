@@ -21,7 +21,7 @@ public sealed partial class LinkAdderService
     private readonly HttpClient _http;
     private readonly CustomSource[] _customSources;
     private sealed record RemoteRoot(string Name, Uri Url, string Username = "", string Password = "");
-    public LinkAdderService(HttpClient http, IEnumerable<CustomSource>? customSources = null) { _http=http; _http.Timeout=TimeSpan.FromSeconds(20); _http.DefaultRequestHeaders.UserAgent.ParseAdd("Local-ISP-FTP-Loader/2.3"); _customSources=(customSources??[]).ToArray(); }
+    public LinkAdderService(HttpClient http, IEnumerable<CustomSource>? customSources = null) { _http=http; _http.Timeout=TimeSpan.FromSeconds(20); _http.DefaultRequestHeaders.UserAgent.ParseAdd("Media-Source-Bridge/2.3"); _customSources=(customSources??[]).ToArray(); }
 
     public async Task<IReadOnlyList<RemoteSearchResult>> SearchRemoteAsync(string mediaType,string query,CancellationToken ct,bool includePosters=true)
     {
@@ -161,7 +161,7 @@ public sealed partial class LinkAdderService
         using var handler=new HttpClientHandler();
         if(root.Username.Length>0)handler.Credentials=new NetworkCredential(root.Username,root.Password);
         using var client=new HttpClient(handler){Timeout=Timeout.InfiniteTimeSpan};
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("Local-ISP-FTP-Loader/2.6");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("Media-Source-Bridge/2.6");
         using var responseMessage=await client.GetAsync(source,HttpCompletionOption.ResponseHeadersRead,ct).ConfigureAwait(false);
         responseMessage.EnsureSuccessStatusCode();
         await using var input=await responseMessage.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);

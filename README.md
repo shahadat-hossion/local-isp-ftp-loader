@@ -1,19 +1,19 @@
-# Local ISP FTP Loader for Jellyfin
+# Media Source Bridge for Jellyfin
 
 <p align="center">
-  <img src="assets/local-isp-ftp-loader-logo.png" alt="Local ISP FTP Loader for Jellyfin" width="220">
+  <img src="assets/media-source-bridge-logo.png" alt="Media Source Bridge for Jellyfin" width="220">
 </p>
 
 <p align="center">
-  <a href="https://github.com/shahadat-hossion/local-isp-ftp-loader/releases/latest"><img src="https://img.shields.io/github/v/release/shahadat-hossion/local-isp-ftp-loader?label=latest%20release" alt="Latest release"></a>
-  <a href="https://github.com/shahadat-hossion/local-isp-ftp-loader/actions/workflows/build.yml"><img src="https://github.com/shahadat-hossion/local-isp-ftp-loader/actions/workflows/build.yml/badge.svg" alt="Build status"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/shahadat-hossion/local-isp-ftp-loader" alt="MIT license"></a>
+  <a href="https://github.com/shahadat-hossion/media-source-bridge/releases/latest"><img src="https://img.shields.io/github/v/release/shahadat-hossion/media-source-bridge?label=latest%20release" alt="Latest release"></a>
+  <a href="https://github.com/shahadat-hossion/media-source-bridge/actions/workflows/build.yml"><img src="https://github.com/shahadat-hossion/media-source-bridge/actions/workflows/build.yml/badge.svg" alt="Build status"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/shahadat-hossion/media-source-bridge" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/Jellyfin-12.0.0-00A4DC?logo=jellyfin" alt="Jellyfin 12.0.0">
 </p>
 
 **Search private FTP, HTTP, or HTTPS media servers and add movies, TV shows, web series, and anime to Jellyfin as `.strm` files or administrator-downloaded local media.**
 
-Local ISP FTP Loader is a Jellyfin 12 plugin for media indexes hosted by a local ISP, home server, NAS, or another private-network server. Signed-in Jellyfin users can search those configured sources from a PC, TV, or phone and add a title to an existing Jellyfin library without manually browsing directories or copying links.
+Media Source Bridge is a Jellyfin 12 plugin for media indexes hosted by a local ISP, home server, NAS, or another private-network server. Signed-in Jellyfin users can search those configured sources from a PC, TV, or phone and add a title to an existing Jellyfin library without manually browsing directories or copying links.
 
 By default, the plugin creates small `.strm` pointer files and playback continues to use the original private server. Administrators can instead explicitly download the actual video files into the selected Jellyfin library.
 
@@ -56,16 +56,18 @@ Supported video extensions include `.mkv`, `.mp4`, `.avi`, `.mov`, `.m4v`, `.ts`
 
 1. In Jellyfin, open **Dashboard > Plugins > Repositories**.
 2. Select **Add Repository**.
-3. Use `Local ISP FTP Loader` as the repository name.
+3. Use `Media Source Bridge` as the repository name.
 4. Paste this manifest URL:
 
    ```text
-   https://raw.githubusercontent.com/shahadat-hossion/local-isp-ftp-loader/refs/heads/main/manifest.json
+   https://raw.githubusercontent.com/shahadat-hossion/media-source-bridge/refs/heads/main/manifest.json
    ```
 
 5. Save, then open **Dashboard > Plugins > Catalog**.
-6. Select **Local ISP FTP Loader** and choose **Install**.
+6. Select **Media Source Bridge** and choose **Install**.
 7. Restart Jellyfin.
+
+If you previously installed Local ISP FTP Loader, update the existing repository entry to the manifest URL above. The plugin keeps the same ID.
 
 If the plugin is missing from the catalog, open the manifest URL from the Jellyfin server and confirm the server is running Jellyfin `12.0.0`.
 
@@ -73,7 +75,7 @@ If the plugin is missing from the catalog, open the manifest URL from the Jellyf
 
 An administrator performs this once for each server:
 
-1. Open **FTP Servers** from the Local ISP FTP Loader menu.
+1. Open **Media Sources** from the Media Source Bridge menu.
 2. Enter a display name, media type, and complete `ftp://`, `http://`, or `https://` directory URL.
 3. Add FTP credentials if the server requires them.
 4. Select **Test connection**.
@@ -85,7 +87,7 @@ The plugin does not include provider-specific addresses. Each administrator supp
 
 ## Search and add media
 
-1. Select the **Search & Add Media** icon in the Jellyfin web header or open **Add Media** from the Local ISP FTP Loader menu.
+1. Select the **Search & Add Media** icon in the Jellyfin web header or open **Add Media** from the Media Source Bridge menu.
 2. Enter at least two characters from a movie, show, episode, or anime title.
 3. Review the single **Search Results** grid. Matching library items appear first, followed by titles available from configured media servers.
 4. Duplicate titles are collapsed into one card. Library items show **Play** (or **Open** for a series); titles not yet in Jellyfin show **Add & Play**.
@@ -93,7 +95,7 @@ The plugin does not include provider-specific addresses. Each administrator supp
 
 ### Default save locations
 
-An administrator can open **FTP Servers** and assign one default Jellyfin library for Movies, Shows, and Anime. These shared defaults are used by Discover, home Search, Search Media, Import Link, Add Media, STRM creation, and downloads. Changing a default there changes the destination for every workflow.
+An administrator can open **Media Sources** and assign one default Jellyfin library for Movies, Shows, and Anime. These shared defaults are used by Discover, home Search, Search Media, Import Link, Add Media, STRM creation, and downloads. Changing a default there changes the destination for every workflow.
 6. The plugin creates the lightweight `.strm` files, starts a Jellyfin scan, waits for the indexed item, and then plays the movie or opens the show. If indexing exceeds 90 seconds, it reports that the title was added and lets Jellyfin finish in the background.
 
 Administrators can expand **Search button settings** on the unified search page to keep Jellyfin's standard search button or replace it with the plugin search. The plugin search icon is always labelled **Search & Add Media** for accessibility.
@@ -107,7 +109,7 @@ The plugin adds a dedicated **Discover** page to Jellyfin's main sidebar. It dis
 - A [TMDb API key or read-access token](https://www.themoviedb.org/settings/api) for movie and series lists. The page includes a **Get TMDb API key** button that opens this official account page in a new tab.
 - Any combination of trending, new, and top-rated movies or series.
 - Trending anime from AniList; no AniList credential is required.
-- A run interval, per-category limit, minimum rating, and minimum TMDb vote count. Discover uses the shared Default Save Locations from the FTP Servers page.
+- A run interval, per-category limit, minimum rating, and minimum TMDb vote count. Discover uses the shared Default Save Locations from the Media Sources page.
 - **Preview only** mode to inspect exact matches without creating files.
 
 The discovery providers supply titles and metadata only. The plugin searches the configured private sources and creates `.strm` files only when one exact title/year match is found. Missing and ambiguous matches are skipped. Scheduled runs check every 15 minutes and execute when the configured interval is due.
@@ -119,12 +121,12 @@ Automatically added titles and their generated files are tracked. If an administ
 
 ## Manual installation
 
-Download the latest `Local-ISP-FTP-Loader-*.zip` from [GitHub Releases](https://github.com/shahadat-hossion/local-isp-ftp-loader/releases/latest). Extract it into a folder named `Local ISP FTP Loader` inside Jellyfin's plugins directory, then restart Jellyfin.
+Download the plugin ZIP from [GitHub Releases](https://github.com/shahadat-hossion/media-source-bridge/releases/latest). Extract it into a folder named `Media Source Bridge` inside Jellyfin's plugins directory, then restart Jellyfin.
 
 Common plugin locations:
 
-- Windows tray installation: `C:\ProgramData\Jellyfin\Server\plugins\Local ISP FTP Loader`
-- Linux package installation: `/var/lib/jellyfin/plugins/Local ISP FTP Loader`
+- Windows tray installation: `C:\ProgramData\Jellyfin\Server\plugins\Media Source Bridge`
+- Linux package installation: `/var/lib/jellyfin/plugins/Media Source Bridge`
 
 The exact Linux path can differ for Docker, Snap, or other installation methods.
 
@@ -133,7 +135,7 @@ The exact Linux path can differ for Docker, Snap, or other installation methods.
 ```text
 Private FTP/HTTP index
         ↓ search and inspect
-Local ISP FTP Loader
+Media Source Bridge
         ↓ create .strm pointers or download actual files (admin)
 Existing Jellyfin library
         ↓ normal library scan
@@ -188,7 +190,7 @@ Restart Jellyfin, close and reopen **Add Media**, then hard-refresh the web clie
 - Source-management operations require Jellyfin administrator elevation.
 - Only loopback and private IPv4 source URLs are accepted.
 - A source URL must remain inside a configured private root.
-- Configure Movies, Shows, and Anime under **FTP Servers → Default Save Locations**. Each destination must match a current compatible Jellyfin library.
+- Configure Movies, Shows, and Anime under **Media Sources → Default Save Locations**. Each destination must match a current compatible Jellyfin library.
 - Existing local files are not overwritten.
 - Actual media downloads require Jellyfin administrator elevation and can only target a current compatible library path.
 - FTP credentials remain in Jellyfin's plugin configuration.
@@ -213,4 +215,4 @@ The build creates a release ZIP and MD5 checksum in `dist`. The ZIP contains the
 
 ## License
 
-Local ISP FTP Loader is released under the [MIT License](LICENSE).
+Media Source Bridge is released under the [MIT License](LICENSE).

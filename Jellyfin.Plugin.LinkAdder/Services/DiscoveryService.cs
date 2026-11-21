@@ -35,7 +35,7 @@ public sealed class DiscoveryService
     {
         using var client = _clients.CreateClient();
         client.Timeout = TimeSpan.FromSeconds(30);
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("Local-ISP-FTP-Loader/2.5");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("Media-Source-Bridge/2.5");
         var credential = options.TmdbCredential.Trim();
         var separator = endpoint.Contains('?', StringComparison.Ordinal) ? '&' : '?';
         var url = $"https://api.themoviedb.org/3/{endpoint}{separator}language=en-US&page=1";
@@ -73,7 +73,7 @@ public sealed class DiscoveryService
         const string query = "query ($perPage: Int) { Page(page: 1, perPage: $perPage) { media(type: ANIME, sort: TRENDING_DESC, isAdult: false) { id title { romaji english native } startDate { year } averageScore popularity coverImage { large } } } }";
         using var client = _clients.CreateClient();
         client.Timeout = TimeSpan.FromSeconds(30);
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("Local-ISP-FTP-Loader/2.5");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("Media-Source-Bridge/2.5");
         using var content = new StringContent(JsonSerializer.Serialize(new { query, variables = new { perPage = Math.Clamp(options.MaxPerCategory * 3, 10, 50) } }), Encoding.UTF8, "application/json");
         using var response = await client.PostAsync("https://graphql.anilist.co", content, ct).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();

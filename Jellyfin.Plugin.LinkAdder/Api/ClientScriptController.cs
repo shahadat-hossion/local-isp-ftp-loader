@@ -92,7 +92,7 @@ public sealed class ClientScriptController : ControllerBase
                     children.appendChild(createSubmenuLink(template, 'localIspAddMediaMenuLink', 'localispmediaadd', 'Add Media', 'add'));
                 }
                 if (!children.querySelector('#localIspFtpServersMenuLink')) {
-                    children.appendChild(createSubmenuLink(template, 'localIspFtpServersMenuLink', 'localispservers', 'FTP Servers', 'storage'));
+                    children.appendChild(createSubmenuLink(template, 'localIspFtpServersMenuLink', 'localispservers', 'Media Sources', 'storage'));
                 }
             }
 
@@ -124,7 +124,7 @@ public sealed class ClientScriptController : ControllerBase
                 parent.type = 'button';
                 parent.className = 'localIspPluginParent';
                 parent.setAttribute('aria-expanded', 'true');
-                parent.innerHTML = '<span class="material-icons storage" aria-hidden="true"></span><span>FTP Loader</span><span class="material-icons expand_more" aria-hidden="true"></span>';
+                parent.innerHTML = '<span class="material-icons storage" aria-hidden="true"></span><span>Media Source Bridge</span><span class="material-icons expand_more" aria-hidden="true"></span>';
                 const children = document.createElement('div');
                 children.className = 'localIspPluginChildren';
                 parent.addEventListener('click', () => {
@@ -170,7 +170,7 @@ public sealed class ClientScriptController : ControllerBase
 
                 const label = Array.from(item.querySelectorAll('*')).find((element) =>
                     element.children.length === 0 && element.textContent?.trim() === 'Jellyfin Enhanced');
-                if (label) label.textContent = 'FTP Loader';
+                if (label) label.textContent = 'Media Source Bridge';
 
                 const icon = item.querySelector('svg, .material-icons');
                 if (icon) {
