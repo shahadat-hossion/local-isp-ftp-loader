@@ -1,34 +1,93 @@
 <!DOCTYPE html><html><head><title>Search &amp; Add Media</title></head><body>
 <div id="LocalIspUnifiedSearchPage" data-role="page" class="page type-interior" data-require="emby-input,emby-button"><div data-role="content"><div class="content-primary lidSearchPage">
 <style>
-.lidSearchPage{max-width:1200px}.lidSearchBox{display:flex;align-items:center;gap:.65rem;margin:1rem 0 1.4rem}.lidSearchBox .inputContainer{flex:1;margin:0}.lidSearchBox button{min-width:7rem}.lidSection{margin:1.4rem 0 2.2rem}.lidSectionHead{display:flex;align-items:baseline;justify-content:space-between;gap:1rem}.lidMuted{opacity:.7}.lidGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:1rem}.lidCard{display:flex;flex-direction:column;min-width:0;background:rgba(24,38,61,.82);border-radius:.55rem;overflow:hidden}.lidPoster{width:100%;aspect-ratio:2/3;object-fit:cover;background:#101a2a}.lidPosterFallback{display:grid;place-items:center;font-size:3rem}.lidBody{display:flex;flex:1;flex-direction:column;gap:.35rem;padding:.75rem}.lidTitle{font-weight:700;line-height:1.25}.lidMeta{font-size:.82rem;opacity:.72}.lidAction{margin-top:auto!important;width:100%}.lidLocal{border:1px solid rgba(0,164,220,.5)}.lidRemote{border:1px solid rgba(255,255,255,.12)}.lidBadge{display:inline-block;width:max-content;padding:.13rem .4rem;border-radius:.3rem;background:rgba(0,164,220,.25);font-size:.75rem;font-weight:700}.lidStatus{min-height:1.5em;font-weight:600}.lidAdmin{margin-top:3rem;padding:1rem;border:1px solid rgba(255,255,255,.18);border-radius:.5rem}.lidCheck{display:flex;align-items:center;gap:.6rem}.lidSpinner{display:inline-block;width:1rem;height:1rem;border:.15rem solid rgba(255,255,255,.25);border-top-color:#00a4dc;border-radius:50%;animation:lidSpin .7s linear infinite}@keyframes lidSpin{to{transform:rotate(360deg)}}@media(max-width:600px){.lidSearchBox{align-items:stretch;flex-direction:column}.lidGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem}}
+.lidSearchPage{max-width:1200px}.lidSearchBox{display:flex;align-items:center;gap:.65rem;margin:1rem 0 1.4rem}.lidSearchBox .inputContainer{flex:1;margin:0}.lidSearchBox select{padding:.55em;background:#242424;color:inherit;border:1px solid #777;border-radius:.3em}.lidSearchBox button{min-width:7rem}.lidSection{margin:1.4rem 0 2.2rem}.lidSectionHead{display:flex;align-items:baseline;justify-content:space-between;gap:1rem}.lidMuted{opacity:.7}.lidGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:1rem}.lidCard{display:flex;flex-direction:column;min-width:0;background:rgba(24,38,61,.82);border-radius:.55rem;overflow:hidden}.lidPoster{width:100%;aspect-ratio:2/3;object-fit:cover;background:#101a2a}.lidPosterFallback{display:grid;place-items:center;font-size:3rem}.lidBody{display:flex;flex:1;flex-direction:column;gap:.35rem;padding:.75rem}.lidTitle{font-weight:700;line-height:1.25}.lidMeta{font-size:.82rem;opacity:.72}.lidAction{margin-top:auto!important;width:100%}.lidLocal{border:1px solid rgba(0,164,220,.5)}.lidRemote{border:1px solid rgba(255,255,255,.12)}.lidBadge{display:inline-block;width:max-content;padding:.13rem .4rem;border-radius:.3rem;background:rgba(0,164,220,.25);font-size:.75rem;font-weight:700}.lidStatus{min-height:1.5em;font-weight:600}.lidAdmin{margin-top:3rem;padding:1rem;border:1px solid rgba(255,255,255,.18);border-radius:.5rem}.lidCheck{display:flex;align-items:center;gap:.6rem}.lidSpinner{display:inline-block;width:1rem;height:1rem;border:.15rem solid rgba(255,255,255,.25);border-top-color:#00a4dc;border-radius:50%;animation:lidSpin .7s linear infinite}@keyframes lidSpin{to{transform:rotate(360deg)}}@media(max-width:600px){.lidSearchBox{align-items:stretch;flex-direction:column}.lidGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem}}
 </style>
 <h2>Search &amp; Add Media</h2><p class="lidMuted">Search your Jellyfin library and configured private FTP or HTTP servers together.</p>
-<div class="lidSearchBox"><div class="inputContainer"><label class="inputLabel" for="lidQuery">Movie, show or anime</label><input id="lidQuery" is="emby-input" autocomplete="off" placeholder="Iron Man"></div><button id="lidSearch" is="emby-button" class="raised button-submit"><span>Search</span></button></div>
+<div class="lidSearchBox"><div class="inputContainer"><label class="inputLabel" for="lidQuery">Movie, show or anime</label><input id="lidQuery" is="emby-input" autocomplete="off" placeholder="Iron Man"></div><select id="lidMediaType" aria-label="Media type"><option value="">All media</option><option value="anime">Anime</option><option value="movie">Movies</option><option value="series">Shows</option></select><button id="lidSearch" is="emby-button" class="raised button-submit"><span>Search</span></button></div>
 <p id="lidStatus" class="lidStatus" aria-live="polite"></p>
 <section id="lidLocalSection" class="lidSection" hidden><div class="lidSectionHead"><h3>In Your Library</h3><span id="lidLocalCount" class="lidMuted"></span></div><div id="lidLocal" class="lidGrid"></div></section>
 <section id="lidRemoteSection" class="lidSection" hidden><div class="lidSectionHead"><h3>Available from Media Servers</h3><span id="lidRemoteCount" class="lidMuted"></span></div><div id="lidRemote" class="lidGrid"></div></section>
 <details id="lidAdmin" class="lidAdmin" hidden><summary><strong>Search button settings</strong></summary><p class="lidMuted">Choose whether this unified search replaces Jellyfin's standard header search button.</p><label class="lidCheck"><input id="lidReplaceSearch" type="checkbox" is="emby-checkbox"><span>Replace Jellyfin's default search button</span></label><button id="lidSaveSettings" is="emby-button" class="raised"><span>Save</span></button><p id="lidSettingsStatus" class="lidMuted"></p></details>
 <script>(function(){
 const page=document.querySelector('#LocalIspUnifiedSearchPage'),q=s=>page.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])),value=(x,n)=>x?.[n[0].toLowerCase()+n.slice(1)]??x?.[n];
-const call=async(path,method='GET',body)=>{try{return await ApiClient.ajax({url:ApiClient.getUrl('Plugins/LinkAdder/'+path),type:method,dataType:'json',contentType:'application/json',data:body?JSON.stringify(body):undefined})}catch(e){let detail='';try{const parsed=JSON.parse(e.responseText||'{}');detail=parsed.error||parsed.detail||''}catch(_){}throw Error(detail||'Request failed'+(e.status?' ('+e.status+')':''))}};
-let libraries=[],searchToken=0,localItems=[];
+async function call(path, method='GET', body) {
+    try {
+        return await ApiClient.ajax({url:ApiClient.getUrl('Plugins/LinkAdder/'+path), type:method, dataType:'json', contentType:'application/json', data:body?JSON.stringify(body):undefined});
+    } catch (error) {
+        let response;
+        try { response = JSON.parse(await error.text?.() ?? error.responseText ?? '{}'); } catch (_) {}
+        throw new Error(response?.error || response?.detail || error.message || 'Request failed.');
+    }
+}
+let searchToken = 0;
+let searchActions;
 const image=item=>item.ImageTags?.Primary?ApiClient.getScaledImageUrl(item.Id,{type:'Primary',maxWidth:360,tag:item.ImageTags.Primary}):'';
-const kind=item=>item.Type==='Movie'?'movie':item.Type==='Series'||item.Type==='Episode'?'series':'movie';
-const norm=s=>String(s||'').toLowerCase().replace(/\b(19|20)\d{2}\b/g,' ').replace(/\b(2160p|1080p|720p|480p|4k|uhd|bluray|web[- .]?dl|webrip|brrip|hdrip|dvdrip|x26[45]|hevc|aac|esub|msubs?)\b.*$/i,' ').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
-const localKey=item=>norm(item.SeriesName||item.Name);
+function pathKey(path) {
+    const normalized = String(path ?? '').replace(/\\/g, '/').replace(/\/+$/, '');
+    return /^[a-z]:|^\/\//i.test(normalized) ? normalized.toLowerCase() : normalized;
+}
+
+
 const poster=(url,title)=>url?'<img class="lidPoster" src="'+esc(url)+'" alt="'+esc(title)+' poster" loading="lazy" onerror="this.outerHTML=\'<span class=&quot;lidPoster lidPosterFallback&quot; aria-hidden=&quot;true&quot;>▣</span>\'">':'<span class="lidPoster lidPosterFallback" aria-hidden="true">▣</span>';
 function navigateItem(id){if(window.Dashboard?.navigate)Dashboard.navigate('details?id='+encodeURIComponent(id));else window.location.hash='#/details?id='+encodeURIComponent(id)}
 async function playItem(item){try{const player=window.playbackManager||window.PlaybackManager;if(player?.play){await player.play({items:[item]});return}}catch(_){}navigateItem(item.Id)}
-function renderLocal(items){localItems=items;q('#lidLocalSection').hidden=!items.length;q('#lidLocalCount').textContent=items.length+' result'+(items.length===1?'':'s');q('#lidLocal').innerHTML=items.map((x,i)=>'<article class="lidCard lidLocal">'+poster(image(x),x.Name)+'<div class="lidBody"><span class="lidBadge">In library</span><span class="lidTitle">'+esc(x.Name)+'</span><span class="lidMeta">'+esc(x.Type)+(x.ProductionYear?' · '+x.ProductionYear:'')+'</span><button is="emby-button" class="raised button-submit lidAction lidPlay" data-index="'+i+'"><span>'+(x.Type==='Movie'||x.Type==='Episode'?'Play':'Open')+'</span></button></div></article>').join('');q('#lidLocal').querySelectorAll('.lidPlay').forEach(b=>b.onclick=()=>{const item=items[+b.dataset.index];item.Type==='Movie'||item.Type==='Episode'?playItem(item):navigateItem(item.Id)})}
-async function searchLocal(query,token){const result=await ApiClient.getItems(ApiClient.getCurrentUserId(),{SearchTerm:query,IncludeItemTypes:'Movie,Series,Episode',Recursive:true,Limit:30,Fields:'PrimaryImageAspectRatio,ProductionYear,SeriesName,Path',ImageTypeLimit:1,EnableImageTypes:'Primary'});if(token!==searchToken)return [];const items=(result.Items||[]).filter(x=>x.Type!=='Episode'||norm(x.Name).includes(norm(query))||norm(x.SeriesName).includes(norm(query)));renderLocal(items);return items}
-const remoteType=x=>x.type,remoteKey=x=>norm(x.name);
-function renderRemote(items){const localKeys=new Set(localItems.map(localKey));q('#lidRemoteSection').hidden=false;q('#lidRemoteCount').textContent=items.length+' result'+(items.length===1?'':'s');q('#lidRemote').innerHTML=items.length?items.map((x,i)=>{const exists=localKeys.has(remoteKey(x));return '<article class="lidCard lidRemote">'+poster(x.posterUrl,x.name)+'<div class="lidBody"><span class="lidBadge">'+esc(x.type==='movie'?'Movie':x.type==='anime'?'Anime':'Show')+'</span><span class="lidTitle">'+esc(x.name)+'</span><span class="lidMeta">'+esc(x.source)+'</span><button is="emby-button" class="raised '+(exists?'':'button-submit')+' lidAction lidAdd" data-index="'+i+'" '+(exists?'disabled':'')+'><span>'+(exists?'Already in Library':'Add & Play')+'</span></button></div></article>'}).join(''):'<p class="lidMuted">No matching titles were found on configured media servers.</p>';q('#lidRemote').querySelectorAll('.lidAdd:not([disabled])').forEach(b=>b.onclick=()=>addRemote(items[+b.dataset.index],b))}
-async function searchRemote(query,token){q('#lidStatus').innerHTML='<span class="lidSpinner"></span> Searching configured media servers…';const types=['movie','series','anime'];const settled=await Promise.allSettled(types.map(type=>call('Remote/Search','POST',{mediaType:type,query}).then(rows=>rows.map(x=>({name:value(x,'Name'),url:value(x,'Url'),source:value(x,'Source'),posterUrl:value(x,'PosterUrl'),type})))));if(token!==searchToken)return;const items=settled.flatMap(x=>x.status==='fulfilled'?x.value:[]).filter((x,i,a)=>a.findIndex(y=>y.url===x.url&&y.type===x.type)===i);renderRemote(items);const failures=settled.filter(x=>x.status==='rejected').length;q('#lidStatus').textContent=items.length?'Local results are shown first. Select Add to import a remote title.':failures===types.length?'Media servers could not be searched.':'Search complete.'}
-async function findIndexed(item,title){const wanted=norm(title),end=Date.now()+90000;while(Date.now()<end){const result=await ApiClient.getItems(ApiClient.getCurrentUserId(),{SearchTerm:title,IncludeItemTypes:item.type==='movie'?'Movie':'Series',Recursive:true,Limit:20,Fields:'Path,ProductionYear'});const match=(result.Items||[]).find(x=>norm(x.Name)===wanted||norm(x.Name).startsWith(wanted+' '));if(match)return match;await new Promise(r=>setTimeout(r,2500))}return null}
-async function addRemote(item,button){const label=button.querySelector('span'),original=label.textContent;button.disabled=true;label.textContent='Adding…';q('#lidStatus').textContent='Creating STRM files for '+item.name+'…';try{const added=await call('Add','POST',{url:item.url,libraryPath:null,mediaType:item.type,title:item.name});const created=value(added,'Created')||[],skipped=value(added,'Skipped')||[];label.textContent='Waiting for Jellyfin…';q('#lidStatus').textContent='Created '+created.length+' file(s), skipped '+skipped.length+'. Waiting for Jellyfin to index the title…';const indexed=await findIndexed(item,item.name);if(!indexed){label.textContent='Added';q('#lidStatus').textContent='Added successfully. Jellyfin is still indexing it; open the library shortly.';return}label.textContent=item.type==='movie'?'Playing…':'Opening…';q('#lidStatus').textContent='Added to the default save location.';if(item.type==='movie')await playItem(indexed);else navigateItem(indexed.Id)}catch(e){button.disabled=false;label.textContent=original;q('#lidStatus').textContent=e.message}}
-async function runSearch(){const query=q('#lidQuery').value.trim();if(query.length<2){q('#lidStatus').textContent='Enter at least two characters.';return}const token=++searchToken;q('#lidLocalSection').hidden=true;q('#lidRemoteSection').hidden=true;q('#lidStatus').innerHTML='<span class="lidSpinner"></span> Searching your library…';try{await searchLocal(query,token)}catch(e){if(token===searchToken)q('#lidStatus').textContent='Local search failed: '+e.message}if(token!==searchToken)return;searchRemote(query,token)}
-async function load(){try{const raw=await call('Libraries');libraries=raw.map(x=>({name:value(x,'Name'),path:value(x,'Path'),mediaType:value(x,'MediaType')}))}catch(e){q('#lidStatus').textContent=e.message}try{const settings=await call('SearchUiSettings');q('#lidReplaceSearch').checked=Boolean(value(settings,'ReplaceDefaultSearch'))}catch(_){}try{await call('CanManage');q('#lidAdmin').hidden=false}catch(_){q('#lidAdmin').hidden=true}setTimeout(()=>q('#lidQuery').focus(),100)}
-q('#lidSearch').onclick=runSearch;q('#lidQuery').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();runSearch()}};q('#lidSaveSettings').onclick=async()=>{try{await call('SearchUiSettings','POST',{replaceDefaultSearch:q('#lidReplaceSearch').checked});q('#lidSettingsStatus').textContent='Saved. Refresh Jellyfin to update the header buttons.'}catch(e){q('#lidSettingsStatus').textContent=e.message}};page.addEventListener('viewshow',load);page.addEventListener('pageshow',load);load();
+function renderLocal(items){q('#lidLocalSection').hidden=!items.length;q('#lidLocalCount').textContent=items.length+' result'+(items.length===1?'':'s');q('#lidLocal').innerHTML=items.map((x,i)=>'<article class="lidCard lidLocal">'+poster(image(x),x.Name)+'<div class="lidBody"><span class="lidBadge">In library</span><span class="lidTitle">'+esc(x.Name)+'</span><span class="lidMeta">'+esc(x.Type)+(x.ProductionYear?' · '+x.ProductionYear:'')+'</span><button is="emby-button" class="raised button-submit lidAction lidPlay" data-index="'+i+'"><span class="material-icons" aria-hidden="true">play_arrow</span><span>'+(x.Type==='Movie'||x.Type==='Episode'?'Play':'Open')+'</span></button></div></article>').join('');q('#lidLocal').querySelectorAll('.lidPlay').forEach(b=>b.onclick=()=>{const item=items[+b.dataset.index];item.Type==='Movie'||item.Type==='Episode'?playItem(item):navigateItem(item.Id)})}
+async function searchLocal(query, token, filter) {
+    const [result, libraries] = await Promise.all([
+        ApiClient.getItems(ApiClient.getCurrentUserId(), {SearchTerm:query, IncludeItemTypes:filter === 'movie' ? 'Movie' : filter === 'series' ? 'Series,Episode' : 'Movie,Series,Episode', Recursive:true, Limit:filter ? 100 : 30, Fields:'Path', ImageTypeLimit:1, EnableImageTypes:'Primary'}),
+        call('Libraries').catch(() => [])
+    ]);
+    if (token !== searchToken) return;
+    const anime = libraries.filter(library => value(library, 'MediaType') === 'anime').map(library => pathKey(value(library, 'Path')));
+    const items = (result.Items || []).map(item => {
+        const path = pathKey(item.Path);
+        const type = anime.some(root => root && path.startsWith(root + '/')) ? 'anime' : item.Type === 'Movie' ? 'movie' : 'series';
+        return {...item, category:type};
+    }).filter(item => !filter || item.category === filter);
+    renderLocal(items.slice(0, 30));
+    return items;
+}
+
+function renderRemote(items, localItems) {
+    q('#lidRemoteSection').hidden = false;
+    q('#lidRemoteCount').textContent = items.length + (items.length === 1 ? ' result' : ' results');
+    q('#lidRemote').innerHTML = items.length ? items.map((item, index) => {
+        const category = {movie:'Movie', series:'Show', anime:'Anime'}[item.type];
+        return '<article class="lidCard lidRemote">' + poster(item.posterUrl,item.name) + '<div class="lidBody"><span class="lidBadge">' + category + '</span><span class="lidTitle">' + esc(item.name) + '</span><span class="lidMeta">' + esc(item.source) + '</span><button is="emby-button" class="raised button-submit lidAction lidAdd" data-index="' + index + '"><span class="material-icons" aria-hidden="true">add</span><span>Add</span></button></div></article>';
+    }).join('') : '<p class="lidMuted">No matching titles were found on configured media servers.</p>';
+    const buttons = q('#lidRemote').querySelectorAll('.lidAdd');
+    if (!buttons.length) return;
+    searchActions ??= import(ApiClient.getUrl('LocalIspFtpLoader/search-actions.js'));
+    searchActions.then(actions => {
+        for (const button of buttons) {
+            if (button.isConnected) actions.bind(button, items[Number(button.dataset.index)], localItems, call);
+        }
+    }).catch(() => { for (const button of buttons) button.textContent = 'Actions unavailable'; });
+}
+async function searchRemote(query, token, filter, localSearch) {
+    const types = filter ? [filter] : ['movie', 'series', 'anime'];
+    const settled = await Promise.allSettled(types.map(async type => {
+        const rows = await call('Remote/Search', 'POST', {mediaType:type, query});
+        return rows.map(row => ({name:value(row,'Name'), url:value(row,'Url'), source:value(row,'Source'), posterUrl:value(row,'PosterUrl'), type}));
+    }));
+    const localItems = await localSearch;
+    if (token !== searchToken) return;
+    renderRemote(settled.flatMap(result => result.status === 'fulfilled' ? result.value : []), localItems);
+    q('#lidStatus').textContent = settled.every(result => result.status === 'rejected') ? settled[0].reason.message : 'Search complete.';
+}
+async function runSearch() {
+    const token = ++searchToken;
+    const query = q('#lidQuery').value.trim();
+    const filter = q('#lidMediaType').value;
+    q('#lidLocalSection').hidden = true;
+    q('#lidRemoteSection').hidden = true;
+    if (query.length < 2) { q('#lidStatus').textContent = 'Enter at least two characters.'; return; }
+    q('#lidStatus').innerHTML = '<span class="lidSpinner"></span> Searching your library and media servers…';
+    const localSearch = searchLocal(query, token, filter).catch(() => []);
+    await searchRemote(query, token, filter, localSearch);
+}
+async function load(){try{const settings=await call('SearchUiSettings');q('#lidReplaceSearch').checked=Boolean(value(settings,'ReplaceDefaultSearch'))}catch(_){}try{await call('CanManage');q('#lidAdmin').hidden=false}catch(_){q('#lidAdmin').hidden=true}setTimeout(()=>q('#lidQuery').focus(),100)}
+q('#lidMediaType').onchange=runSearch;q('#lidSearch').onclick=runSearch;q('#lidQuery').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();runSearch()}};q('#lidSaveSettings').onclick=async()=>{try{await call('SearchUiSettings','POST',{replaceDefaultSearch:q('#lidReplaceSearch').checked});q('#lidSettingsStatus').textContent='Saved. Refresh Jellyfin to update the header buttons.'}catch(e){q('#lidSettingsStatus').textContent=e.message}};page.addEventListener('viewshow',load);page.addEventListener('pageshow',load);load();
 })();</script>
 </div></div></div></body></html>

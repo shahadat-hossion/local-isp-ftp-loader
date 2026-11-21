@@ -94,8 +94,17 @@ public sealed class LinkAdderController : ControllerBase
     }
 
     [HttpPost("Remote/Search")]
-    public async Task<ActionResult<IReadOnlyList<RemoteSearchResult>>> SearchRemote([FromBody] RemoteSearchRequest request, CancellationToken ct) =>
-        Ok(await _service.SearchRemoteAsync(request.MediaType, request.Query, ct).ConfigureAwait(false));
+    public async Task<ActionResult<IReadOnlyList<RemoteSearchResult>>> SearchRemote([FromBody] RemoteSearchRequest request, CancellationToken ct)
+    {
+        try
+        {
+            return Ok(await _service.SearchRemoteAsync(NormalizeMediaType(request.MediaType), request.Query, ct).ConfigureAwait(false));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
 
     [HttpPost("Preview")]
     public async Task<ActionResult<PreviewResult>> Preview([FromBody] PreviewRequest request, CancellationToken ct) =>
@@ -104,25 +113,44 @@ public sealed class LinkAdderController : ControllerBase
     [HttpPost("Add")]
     public async Task<ActionResult<AddResult>> Add([FromBody] AddRequest request, CancellationToken ct)
     {
-        var mediaType = NormalizeMediaType(request.MediaType);
-        var configuredPath = DefaultLibraryPath(mediaType);
-        var requestedPath = string.IsNullOrWhiteSpace(configuredPath) ? string.Empty : Path.GetFullPath(configuredPath);
-        var option = LibrariesForValidation().FirstOrDefault(x => x.MediaType == mediaType && x.Path.Equals(requestedPath, StringComparison.OrdinalIgnoreCase));
-        if (option is null) return BadRequest(new { error = $"Set the {mediaType} search destination on the FTP Servers page." });
-        var source = _service.ValidateConfiguredSource(request.Url);
-        var addKey = $"{option.Path}\n{mediaType}\n{source.AbsoluteUri}";
-        var addLock = AddLocks.GetOrAdd(addKey, _ => new SemaphoreSlim(1, 1));
-        await addLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            var preview = await _service.PreviewAsync(source.AbsoluteUri, request.MediaType, request.Title, ct).ConfigureAwait(false);
-            var result = _service.Write(preview, option.Path);
-            _ = Task.Run(() => _library.ValidateMediaLibrary(new Progress<double>(), CancellationToken.None));
-            return Ok(result with { Refresh = "Jellyfin library scan started." });
+            var mediaType = NormalizeMediaType(request.MediaType);
+            var configuredPath = DefaultLibraryPath(mediaType);
+            var compatible = LibrariesForValidation().Where(x => x.MediaType == mediaType).ToArray();
+            var option = string.IsNullOrWhiteSpace(configuredPath)
+                ? compatible.Length == 1 ? compatible[0] : null
+                : compatible.FirstOrDefault(x => Path.TrimEndingDirectorySeparator(x.Path).Equals(
+                    Path.TrimEndingDirectorySeparator(Path.GetFullPath(configuredPath)), StringComparison.OrdinalIgnoreCase));
+            if (option is null)
+                return BadRequest(new { error = $"Set the {mediaType} default save location on the FTP Servers page." });
+
+            var preview = await _service.PreviewAsync(request.Url, mediaType, request.Title, ct).ConfigureAwait(false);
+            var addLock = AddLocks.GetOrAdd($"{option.Path}\n{preview.Title}", _ => new SemaphoreSlim(1, 1));
+            await addLock.WaitAsync(ct).ConfigureAwait(false);
+            AddResult result;
+            try
+            {
+                result = _service.Write(preview, option.Path);
+            }
+            finally
+            {
+                addLock.Release();
+            }
+            _library.QueueLibraryScan();
+            return Ok(result with { Refresh = "Jellyfin library scan queued." });
         }
-        finally
+        catch (InvalidOperationException ex)
         {
-            addLock.Release();
+            return BadRequest(new { error = ex.Message });
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested && ex is (HttpRequestException or WebException or OperationCanceledException))
+        {
+            return StatusCode(502, new { error = "Could not read the selected media folder. Check the source connection and credentials." });
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return StatusCode(500, new { error = "Could not write STRM files. Check that Jellyfin can write to the library folder and retry." });
         }
     }
 

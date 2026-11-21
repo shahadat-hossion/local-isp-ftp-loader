@@ -22,6 +22,15 @@ public sealed class ClientScriptController : ControllerBase
         return Content(ClientScript, "application/javascript", System.Text.Encoding.UTF8);
     }
 
+    [AllowAnonymous]
+    [HttpGet("search-actions.js")]
+    public FileStreamResult GetSearchActions()
+    {
+        Response.Headers.CacheControl = "no-cache";
+        var script = typeof(ClientScriptController).Assembly.GetManifestResourceStream("Jellyfin.Plugin.LinkAdder.Configuration.searchActions.js");
+        return File(script!, "application/javascript");
+    }
+
     private const string ClientScript = """
         (() => {
             'use strict';
@@ -296,28 +305,34 @@ public sealed class ClientScriptController : ControllerBase
             let nativeSearchInput = null;
             let nativeSearchTimer = 0;
             let nativeSearchSequence = 0;
-            let libraryOptions = null;
-            let nativeLocalTitles = new Set();
             let nativeLocalItems = [];
             let nativeRemoteItems = [];
+            let searchActions;
+            let nativeMediaType = '';
 
             const value = (item, name) => item?.[name[0].toLowerCase() + name.slice(1)] ?? item?.[name];
             const escapeHtml = (text) => String(text ?? '').replace(/[&<>"']/g, (character) => ({
                 '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
             })[character]);
-            const normalizeTitle = (text) => String(text ?? '').toLowerCase()
-                .replace(/\b(19|20)\d{2}\b/g, ' ')
-                .replace(/\b(2160p|1080p|720p|480p|4k|uhd|bluray|web[- .]?dl|webrip|brrip|hdrip|dvdrip|x26[45]|hevc|aac|esub|msubs?)\b.*$/i, ' ')
-                .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+            const pathKey = (path) => {
+                const normalized = String(path ?? '').replace(/\\/g, '/').replace(/\/+$/, '');
+                return /^[a-z]:|^\/\//i.test(normalized) ? normalized.toLowerCase() : normalized;
+            };
 
             async function pluginCall(path, method = 'GET', body) {
-                return ApiClient.ajax({
-                    url: ApiClient.getUrl('Plugins/LinkAdder/' + path),
-                    type: method,
-                    dataType: 'json',
-                    contentType: 'application/json',
-                    data: body ? JSON.stringify(body) : undefined
-                });
+                try {
+                    return await ApiClient.ajax({
+                        url: ApiClient.getUrl('Plugins/LinkAdder/' + path),
+                        type: method,
+                        dataType: 'json',
+                        contentType: 'application/json',
+                        data: body ? JSON.stringify(body) : undefined
+                    });
+                } catch (error) {
+                    let response;
+                    try { response = JSON.parse(await error.text?.() ?? error.responseText ?? '{}'); } catch (_) {}
+                    throw new Error(response?.error || response?.detail || error.message || 'Request failed.');
+                }
             }
 
             function ensureNativeSearchStyles() {
@@ -329,6 +344,7 @@ public sealed class ClientScriptController : ControllerBase
                     #${remoteSectionId} .localIspNativeFields { max-width:54em;margin:0 auto 1.5em;padding:0 3.3%; }
                     #${remoteSectionId} .localIspNativeInputRow { display:flex;align-items:center;gap:.7em; }
                     #${remoteSectionId} .localIspNativeInputRow .inputContainer { flex:1;margin:0; }
+                    #${remoteSectionId} .localIspNativeInputRow select { padding:.55em;background:#242424;color:inherit;border:1px solid #777;border-radius:.3em; }
                     #${remoteSectionId} .localIspResultSection { margin-top:1.6em; }
                     #${remoteSectionId} .localIspRemoteGrid { display:grid;grid-template-columns:repeat(auto-fill,minmax(10.5em,1fr));gap:1.25em;padding:0 3.3%; }
                     #${remoteSectionId} .localIspRemoteCard { min-width:0;max-width:14em; }
@@ -342,14 +358,12 @@ public sealed class ClientScriptController : ControllerBase
                 document.head.appendChild(style);
             }
 
-            function localSearchTitles() { return nativeLocalTitles; }
-
             function nativeSection() {
                 let section = document.getElementById(remoteSectionId);
                 if (section) return section;
                 section = document.createElement('section');
                 section.id = remoteSectionId;
-                section.innerHTML = '<div class="localIspNativeFields"><div class="localIspNativeInputRow"><span class="material-icons search" aria-hidden="true"></span><div class="inputContainer"><input id="localIspNativeQuery" class="emby-input" type="text" placeholder="Search" autocomplete="off"></div></div></div><div id="localIspCombinedResults" class="localIspResultSection"><h2 class="sectionTitle sectionTitle-cards focuscontainer-x padded-left padded-right">Search Results</h2><div class="localIspSearchMessage">Enter at least two characters to search your library and configured media servers.</div></div>';
+                section.innerHTML = '<div class="localIspNativeFields"><div class="localIspNativeInputRow"><span class="material-icons search" aria-hidden="true"></span><div class="inputContainer"><input id="localIspNativeQuery" class="emby-input" type="text" placeholder="Search" autocomplete="off"></div><select id="localIspNativeMediaType" aria-label="Media type"><option value="">All media</option><option value="anime">Anime</option><option value="movie">Movies</option><option value="series">Shows</option></select></div></div><div id="localIspCombinedResults" class="localIspResultSection"><h2 class="sectionTitle sectionTitle-cards focuscontainer-x padded-left padded-right">Search Results</h2><div class="localIspSearchMessage">Enter at least two characters to search your library and configured media servers.</div></div>';
                 document.body.appendChild(section);
                 return section;
             }
@@ -363,133 +377,113 @@ public sealed class ClientScriptController : ControllerBase
                 const image = localPoster(item);
                 const poster = image ? `<span class="localIspPoster" role="img" aria-label="${escapeHtml(item.Name)} poster" style="background-image:url('${escapeHtml(image).replace(/'/g, '%27')}')"></span>`
                     : '<span class="localIspPoster localIspPosterFallback material-icons movie" aria-hidden="true"></span>';
-                return `<div class="card overflowPortraitCard localIspRemoteCard"><div class="cardBox cardBox-bottompadded"><div class="cardScalable"><div class="cardPadder cardPadder-overflowPortrait">${poster}</div></div><div class="cardText cardTextCentered">${escapeHtml(item.Name)}</div><div class="cardText cardTextCentered localIspSource">${escapeHtml(item.Type)}${item.ProductionYear ? ' · ' + item.ProductionYear : ''}</div><button is="emby-button" class="raised button-submit localIspAddButton localIspOpenButton" data-id="${escapeHtml(item.Id)}"><span>${item.Type === 'Movie' || item.Type === 'Episode' ? 'Play' : 'Open'}</span></button></div></div>`;
+                return `<div class="card overflowPortraitCard localIspRemoteCard"><div class="cardBox cardBox-bottompadded"><div class="cardScalable"><div class="cardPadder cardPadder-overflowPortrait">${poster}</div></div><div class="cardText cardTextCentered">${escapeHtml(item.Name)}</div><div class="cardText cardTextCentered localIspSource">${escapeHtml(item.Type)}${item.ProductionYear ? ' · ' + item.ProductionYear : ''}</div><button is="emby-button" class="raised button-submit localIspAddButton localIspOpenButton" data-id="${escapeHtml(item.Id)}"><span class="material-icons" aria-hidden="true">play_arrow</span><span>${item.Type === 'Movie' || item.Type === 'Episode' ? 'Play' : 'Open'}</span></button></div></div>`;
             }
 
             function renderLocalResults(items) {
-                const seen = new Set();
-                nativeLocalItems = items.filter((item) => {
-                    const key = normalizeTitle(item.SeriesName || item.Name);
-                    return key && !seen.has(key) && seen.add(key);
-                });
-                nativeLocalTitles = new Set(nativeLocalItems.map((item) => normalizeTitle(item.SeriesName || item.Name)));
+                nativeLocalItems = items;
                 renderCombinedResults();
             }
 
-            function remoteCard(item, index, exists) {
+            function remoteCard(item, index) {
                 const poster = item.posterUrl
                     ? `<span class="localIspPoster" role="img" aria-label="${escapeHtml(item.name)} poster" style="background-image:url('${escapeHtml(item.posterUrl).replace(/'/g, '%27')}')"></span>`
                     : '<span class="localIspPoster localIspPosterFallback material-icons movie" aria-hidden="true"></span>';
-                const action = exists ? 'Already in Library' : 'Add & Play';
+                const category = { movie:'Movie', series:'Show', anime:'Anime' }[item.mediaType];
                 return `<div class="card overflowPortraitCard localIspRemoteCard" data-index="${index}">
                     <div class="cardBox cardBox-bottompadded"><div class="cardScalable"><div class="cardPadder cardPadder-overflowPortrait">${poster}</div></div>
-                    <div class="cardText cardTextCentered">${escapeHtml(item.name)}</div><div class="cardText cardTextCentered localIspSource">${escapeHtml(item.source)}</div>
-                    <button is="emby-button" class="raised ${exists ? '' : 'button-submit'} localIspAddButton" data-index="${index}" ${exists ? 'disabled' : ''}><span>${action}</span></button></div></div>`;
+                    <div class="cardText cardTextCentered">${escapeHtml(item.name)}</div><div class="cardText cardTextCentered localIspSource">${category} · ${escapeHtml(item.source)}</div>
+                    <button is="emby-button" class="raised button-submit localIspAddButton" data-index="${index}"><span class="material-icons" aria-hidden="true">add</span><span>Add</span></button></div></div>`;
             }
 
             function renderRemoteResults(items) {
-                const seen = new Set();
-                nativeRemoteItems = items.filter((item) => {
-                    const key = normalizeTitle(item.name);
-                    return key && !seen.has(key) && seen.add(key);
-                });
+                nativeRemoteItems = items;
                 renderCombinedResults();
             }
 
             function renderCombinedResults() {
                 const section = document.querySelector('#localIspCombinedResults');
                 if (!section) return;
-                const localKeys = localSearchTitles();
-                const remoteOnly = nativeRemoteItems.filter((item) => !localKeys.has(normalizeTitle(item.name)));
-                const cards = nativeLocalItems.map(localCard).join('')
-                    + remoteOnly.map((item, index) => remoteCard(item, index, false)).join('');
+                const remoteItems = nativeRemoteItems;
+                const cards = nativeLocalItems.slice(0, 30).map(localCard).join('')
+                    + remoteItems.map(remoteCard).join('');
                 section.innerHTML = '<h2 class="sectionTitle sectionTitle-cards focuscontainer-x padded-left padded-right">Search Results</h2>'
                     + (cards ? `<div class="localIspRemoteGrid">${cards}</div>` : '<div class="localIspSearchMessage">No matching titles found.</div>');
                 section.querySelectorAll('.localIspOpenButton').forEach((button) => button.addEventListener('click', async () => {
                     const item = await ApiClient.getItem(ApiClient.getCurrentUserId(), button.dataset.id);
                     openIndexedItem(item);
                 }));
-                section.querySelectorAll('.localIspAddButton:not(.localIspOpenButton):not([disabled])').forEach((button) => {
-                    button.addEventListener('click', () => addRemoteItem(remoteOnly[Number(button.dataset.index)], button));
-                });
+                const buttons = section.querySelectorAll('.localIspAddButton:not(.localIspOpenButton)');
+                if (!buttons.length) return;
+                searchActions ??= import(ApiClient.getUrl('LocalIspFtpLoader/search-actions.js'));
+                const localItems = nativeLocalItems;
+                searchActions.then(actions => {
+                    for (const button of buttons) {
+                        if (button.isConnected) actions.bind(button, remoteItems[Number(button.dataset.index)], localItems, pluginCall);
+                    }
+                }).catch(() => { for (const button of buttons) button.textContent = 'Actions unavailable'; });
             }
 
-            async function searchRemoteSources(query) {
-                const sequence = ++nativeSearchSequence;
+            async function searchRemoteSources(query, sequence, filter, localSearch) {
                 const section = document.querySelector('#localIspCombinedResults');
                 if (!section) return;
                 if (query.length < 2) {
-                    nativeLocalItems = []; nativeRemoteItems = []; nativeLocalTitles = new Set();
                     section.innerHTML = '<h2 class="sectionTitle sectionTitle-cards focuscontainer-x padded-left padded-right">Search Results</h2><div class="localIspSearchMessage">Enter at least two characters to search your library and configured media servers.</div>';
                     return;
                 }
                 section.innerHTML = '<h2 class="sectionTitle sectionTitle-cards focuscontainer-x padded-left padded-right">Search Results</h2><div class="localIspSearchMessage">Searching your library and media servers…</div>';
-                const mediaTypes = ['movie', 'series', 'anime'];
+                const mediaTypes = filter ? [filter] : ['movie', 'series', 'anime'];
                 const settled = await Promise.allSettled(mediaTypes.map((mediaType) => pluginCall('Remote/Search', 'POST', { mediaType, query })
                     .then((rows) => rows.map((row) => ({ name:value(row, 'Name'), url:value(row, 'Url'), source:value(row, 'Source'), posterUrl:value(row, 'PosterUrl'), mediaType })) )));
+                if (sequence !== nativeSearchSequence || !window.location.hash.startsWith('#/search')) return;
+                await localSearch;
                 if (sequence !== nativeSearchSequence || !window.location.hash.startsWith('#/search')) return;
                 const results = settled.flatMap((result) => result.status === 'fulfilled' ? result.value : [])
                     .filter((item, index, all) => all.findIndex((other) => other.url === item.url && other.mediaType === item.mediaType) === index);
                 renderRemoteResults(results);
-            }
-
-            async function searchLocalLibrary(query, sequence) {
-                const result = await ApiClient.getItems(ApiClient.getCurrentUserId(), {
-                    SearchTerm:query, IncludeItemTypes:'Movie,Series,Episode', Recursive:true, Limit:30,
-                    Fields:'PrimaryImageAspectRatio,ProductionYear,SeriesName,Path', ImageTypeLimit:1, EnableImageTypes:'Primary'
-                });
-                if (sequence !== nativeSearchSequence || !window.location.hash.startsWith('#/search')) return;
-                renderLocalResults(result.Items || []);
-            }
-
-            async function libraries() {
-                if (libraryOptions) return libraryOptions;
-                const rows = await pluginCall('Libraries');
-                libraryOptions = rows.map((row) => ({ name:value(row, 'Name'), path:value(row, 'Path'), mediaType:value(row, 'MediaType') }));
-                return libraryOptions;
-            }
-
-            async function waitForIndexedItem(item) {
-                const wanted = normalizeTitle(item.name);
-                const deadline = Date.now() + 90000;
-                while (Date.now() < deadline) {
-                    const result = await ApiClient.getItems(ApiClient.getCurrentUserId(), {
-                        SearchTerm:item.name, IncludeItemTypes:item.mediaType === 'movie' ? 'Movie' : 'Series', Recursive:true, Limit:20, Fields:'Path,ProductionYear'
-                    });
-                    const match = (result.Items || []).find((entry) => normalizeTitle(entry.Name) === wanted);
-                    if (match) return match;
-                    await new Promise((resolve) => setTimeout(resolve, 2500));
+                if (settled.every((result) => result.status === 'rejected')) {
+                    const message = document.createElement('p');
+                    message.className = 'localIspSearchMessage';
+                    message.textContent = settled[0].reason.message;
+                    section.appendChild(message);
                 }
-                return null;
             }
 
-            function openIndexedItem(item) {
+            async function searchLocalLibrary(query, sequence, filter) {
+                const [result, libraries] = await Promise.all([
+                    ApiClient.getItems(ApiClient.getCurrentUserId(), {
+                        SearchTerm:query, IncludeItemTypes:filter === 'movie' ? 'Movie' : filter === 'series' ? 'Series,Episode' : 'Movie,Series,Episode',
+                        Recursive:true, Limit:filter ? 100 : 30, Fields:'Path', ImageTypeLimit:1, EnableImageTypes:'Primary'
+                    }),
+                    pluginCall('Libraries').catch(() => [])
+                ]);
+                if (sequence !== nativeSearchSequence || !window.location.hash.startsWith('#/search')) return;
+                const anime = libraries.filter((library) => value(library, 'MediaType') === 'anime')
+                    .map((library) => pathKey(value(library, 'Path')));
+                renderLocalResults((result.Items || []).map((item) => {
+                    const path = pathKey(item.Path);
+                    const type = anime.some((root) => root && path.startsWith(root + '/')) ? 'anime' : item.Type === 'Movie' ? 'movie' : 'series';
+                    return {...item, category:type};
+                }).filter(item => !filter || item.category === filter));
+            }
+
+            async function openIndexedItem(item) {
+                try {
+                    const player = window.playbackManager || window.PlaybackManager;
+                    if ((item.Type === 'Movie' || item.Type === 'Episode') && player?.play) {
+                        await player.play({items:[item]});
+                        return;
+                    }
+                } catch (_) {}
                 if (window.Dashboard?.navigate) Dashboard.navigate('details?id=' + encodeURIComponent(item.Id));
                 else window.location.hash = '#/details?id=' + encodeURIComponent(item.Id);
-            }
-
-            async function addRemoteItem(item, button) {
-                const label = button.querySelector('span');
-                const original = label.textContent;
-                button.disabled = true;
-                try {
-                    label.textContent = 'Adding…';
-                    await pluginCall('Add', 'POST', { url:item.url, libraryPath:null, mediaType:item.mediaType, title:item.name });
-                    label.textContent = 'Waiting for Jellyfin…';
-                    const indexed = await waitForIndexedItem(item);
-                    if (!indexed) { label.textContent = 'Added'; button.title = 'Jellyfin is still indexing this title.'; return; }
-                    label.textContent = item.mediaType === 'movie' ? 'Play' : 'Open';
-                    openIndexedItem(indexed);
-                } catch (error) {
-                    label.textContent = original;
-                    button.disabled = false;
-                    alert(error?.message || 'The title could not be added.');
-                }
             }
 
             function attachNativeSearch() {
                 if (!window.location.hash.startsWith('#/search')) {
                     document.getElementById(remoteSectionId)?.remove();
+                    if (nativeSearchInput) ++nativeSearchSequence;
+                    clearTimeout(nativeSearchTimer);
                     nativeSearchInput = null;
                     return;
                 }
@@ -498,21 +492,23 @@ public sealed class ClientScriptController : ControllerBase
                 const input = document.querySelector('#localIspNativeQuery');
                 if (!input || input === nativeSearchInput) return;
                 nativeSearchInput = input;
-                input.addEventListener('input', () => {
+                const select = document.querySelector('#localIspNativeMediaType');
+                select.value = nativeMediaType;
+                const search = (delay) => {
                     clearTimeout(nativeSearchTimer);
+                    const sequence = ++nativeSearchSequence;
                     nativeSearchTimer = setTimeout(() => {
                         const query = input.value.trim();
-                        if (query.length < 2) {
-                            nativeLocalTitles = new Set();
-                            searchRemoteSources(query);
-                            return;
-                        }
                         nativeLocalItems = [];
                         nativeRemoteItems = [];
-                        nativeLocalTitles = new Set();
-                        searchRemoteSources(query);
-                        searchLocalLibrary(query, nativeSearchSequence);
-                    }, 450);
+                        const localSearch = query.length >= 2 && searchLocalLibrary(query, sequence, nativeMediaType).catch(() => {});
+                        searchRemoteSources(query, sequence, nativeMediaType, localSearch);
+                    }, delay);
+                };
+                input.addEventListener('input', () => search(450));
+                select.addEventListener('change', () => {
+                    nativeMediaType = select.value;
+                    search(0);
                 });
                 setTimeout(() => input.focus(), 50);
             }

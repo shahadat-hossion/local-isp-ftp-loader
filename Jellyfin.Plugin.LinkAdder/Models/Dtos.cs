@@ -8,7 +8,11 @@ public sealed record SearchUiSettings(bool ReplaceDefaultSearch);
 public sealed record SearchDestinationSettings(string MovieLibraryPath, string SeriesLibraryPath, string AnimeLibraryPath);
 public sealed record PlannedFile(string Url, string RelativePath);
 public sealed record PreviewResult(string Title, IReadOnlyList<PlannedFile> Files);
-public sealed record AddResult(IReadOnlyList<string> Created, IReadOnlyList<string> Skipped, string Refresh);
+public sealed record AddResult(IReadOnlyList<string> Created, IReadOnlyList<string> Skipped, string Refresh)
+{
+    public string? Title { get; init; }
+    public string? TitlePath { get; init; }
+}
 public sealed record DownloadJobStarted(string JobId);
 public sealed record DownloadJobView(string JobId, string Status, double Percentage, string Message, int Downloaded, int Skipped);
 public sealed record CustomSourceRequest(string Name, string Url, string MediaType, string? Username, string? Password);

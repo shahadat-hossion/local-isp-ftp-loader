@@ -1,14 +1,14 @@
 {
   "category": "General",
-  "changelog": "Add unified Jellyfin home search with automatic STRM creation and shared default save locations for movies, shows, and anime.",
+  "changelog": "Improve search ranking and STRM imports, add media type filters, and show independent add, indexing, and play states for concurrent imports.",
   "description": "Search user-configured local ISP media servers, add STRM entries, or download media to Jellyfin storage.",
   "guid": "9399b942-4b6d-46a7-9a5d-a01764f7ee6a",
   "name": "Local ISP FTP Loader",
   "overview": "Search local ISP media, create STRM entries, or download files locally.",
   "owner": "shahadat-hossion",
   "targetAbi": "12.0.0.0",
-  "timestamp": "2026-11-20T09:12:29Z",
-  "version": "2.7.3.0",
+  "timestamp": "2026-11-21T10:07:08Z",
+  "version": "2.7.4.0",
   "status": "Active",
   "autoUpdate": false,
   "assemblies": []
