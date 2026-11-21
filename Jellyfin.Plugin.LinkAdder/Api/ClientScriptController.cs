@@ -23,6 +23,15 @@ public sealed class ClientScriptController : ControllerBase
     }
 
     [AllowAnonymous]
+    [HttpGet("cinema-hero.jpg")]
+    public FileStreamResult GetCinemaHero()
+    {
+        Response.Headers.CacheControl = "public, max-age=86400";
+        var image = typeof(ClientScriptController).Assembly.GetManifestResourceStream("Jellyfin.Plugin.LinkAdder.Configuration.cinema-hero.jpg");
+        return File(image!, "image/jpeg");
+    }
+
+    [AllowAnonymous]
     [HttpGet("search-actions.js")]
     public FileStreamResult GetSearchActions()
     {

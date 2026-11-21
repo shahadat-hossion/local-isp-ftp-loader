@@ -1,14 +1,14 @@
 {
   "category": "General",
-  "changelog": "Expand or collapse Discover, Search, Import Link, and Setup Media directly from Media Source Bridge. Keep the four shortcuts on the landing page.",
+  "changelog": "Redesign the landing page with a cinematic theater backdrop, a featured Discover button, and responsive shortcuts.",
   "description": "Search private media servers, import links, and add movies, shows, or anime to Jellyfin as streams or local files.",
   "guid": "9399b942-4b6d-46a7-9a5d-a01764f7ee6a",
   "name": "Media Source Bridge",
   "overview": "Search private media sources and add streams or download media to Jellyfin libraries.",
   "owner": "shahadat-hossion",
   "targetAbi": "12.0.0.0",
-  "timestamp": "2026-11-21T11:51:44Z",
-  "version": "2.7.7.0",
+  "timestamp": "2026-11-21T12:18:40Z",
+  "version": "2.7.8.0",
   "status": "Active",
   "autoUpdate": false,
   "assemblies": []
