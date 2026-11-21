@@ -9,6 +9,14 @@
     "overview": "Search private media sources and add streams or download media to Jellyfin libraries.",
     "versions": [
       {
+        "version": "2.7.6.0",
+        "changelog": "Group all Media Source Bridge pages under one Jellyfin sidebar entry.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/shahadat-hossion/media-source-bridge/releases/download/v2.7.6/Media-Source-Bridge-2.7.6.zip",
+        "checksum": "03d62dbabbf78e32afeb066f6ac9f250",
+        "timestamp": "2026-11-21T11:17:33Z"
+      },
+      {
         "version": "2.7.5.0",
         "changelog": "Rename the plugin to Media Source Bridge and the server settings page to Media Sources.",
         "targetAbi": "12.0.0.0",
