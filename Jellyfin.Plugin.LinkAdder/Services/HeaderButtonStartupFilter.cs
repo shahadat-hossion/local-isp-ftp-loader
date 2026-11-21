@@ -11,7 +11,7 @@ namespace Jellyfin.Plugin.LinkAdder.Services;
 /// </summary>
 public sealed class HeaderButtonStartupFilter : IStartupFilter
 {
-    private const string ScriptTag = "<script defer src=\"../LocalIspFtpLoader/client.js?v=2.7.3-unified-search\"></script>";
+    private const string ScriptTag = "<script defer src=\"../LocalIspFtpLoader/client.js?v=sidebar-disclosure\"></script>";
 
     /// <inheritdoc />
     public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next)

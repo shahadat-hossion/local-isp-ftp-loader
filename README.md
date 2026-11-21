@@ -75,7 +75,7 @@ If the plugin is missing from the catalog, open the manifest URL from the Jellyf
 
 An administrator performs this once for each server:
 
-1. Open **Media Sources** from the Media Source Bridge menu.
+1. Open **Setup Media** from the Media Source Bridge landing page.
 2. Enter a display name, media type, and complete `ftp://`, `http://`, or `https://` directory URL.
 3. Add FTP credentials if the server requires them.
 4. Select **Test connection**.
@@ -87,7 +87,7 @@ The plugin does not include provider-specific addresses. Each administrator supp
 
 ## Search and add media
 
-1. Select the **Search & Add Media** icon in the Jellyfin web header or open **Add Media** from the Media Source Bridge menu.
+1. Select the **Search & Add Media** icon in the Jellyfin web header or open **Search** from the Media Source Bridge landing page.
 2. Enter at least two characters from a movie, show, episode, or anime title.
 3. Review the single **Search Results** grid. Matching library items appear first, followed by titles available from configured media servers.
 4. Duplicate titles are collapsed into one card. Library items show **Play** (or **Open** for a series); titles not yet in Jellyfin show **Add & Play**.
@@ -95,7 +95,7 @@ The plugin does not include provider-specific addresses. Each administrator supp
 
 ### Default save locations
 
-An administrator can open **Media Sources** and assign one default Jellyfin library for Movies, Shows, and Anime. These shared defaults are used by Discover, home Search, Search Media, Import Link, Add Media, STRM creation, and downloads. Changing a default there changes the destination for every workflow.
+An administrator can open **Setup Media** and assign one default Jellyfin library for Movies, Shows, and Anime. These shared defaults are used by Discover, home Search, Search Media, Import Link, Add Media, STRM creation, and downloads. Changing a default there changes the destination for every workflow.
 6. The plugin creates the lightweight `.strm` files, starts a Jellyfin scan, waits for the indexed item, and then plays the movie or opens the show. If indexing exceeds 90 seconds, it reports that the title was added and lets Jellyfin finish in the background.
 
 Administrators can expand **Search button settings** on the unified search page to keep Jellyfin's standard search button or replace it with the plugin search. The plugin search icon is always labelled **Search & Add Media** for accessibility.
@@ -104,12 +104,12 @@ Jellyfin handles metadata, artwork, transcoding, and playback normally. The remo
 
 ## Automatic discovery
 
-Open **Media Source Bridge** in Jellyfin's sidebar to find **Discover**, **Import Link**, **Search & Add**, **Add Media**, and administrator-only **Media Sources**. Discover displays responsive Movies, Shows, and Anime grids for signed-in users, with animated skeleton cards and progress indicators during API and private-server operations. Administrators can expand **Automation settings** on that page and configure:
+Open **Media Source Bridge** in Jellyfin's sidebar to reach the landing page and expand its links to **Discover**, **Search**, **Import Link**, and administrator-only **Setup Media**. Select the sidebar entry again to collapse the links. Discover displays responsive Movies, Shows, and Anime grids for signed-in users, with animated skeleton cards and progress indicators during API and private-server operations. Administrators can expand **Automation settings** on that page and configure:
 
 - A [TMDb API key or read-access token](https://www.themoviedb.org/settings/api) for movie and series lists. The page includes a **Get TMDb API key** button that opens this official account page in a new tab.
 - Any combination of trending, new, and top-rated movies or series.
 - Trending anime from AniList; no AniList credential is required.
-- A run interval, per-category limit, minimum rating, and minimum TMDb vote count. Discover uses the shared Default Save Locations from the Media Sources page.
+- A run interval, per-category limit, minimum rating, and minimum TMDb vote count. Discover uses the shared Default Save Locations from Setup Media.
 - **Preview only** mode to inspect exact matches without creating files.
 
 The discovery providers supply titles and metadata only. The plugin searches the configured private sources and creates `.strm` files only when one exact title/year match is found. Missing and ambiguous matches are skipped. Scheduled runs check every 15 minutes and execute when the configured interval is due.
@@ -190,7 +190,7 @@ Restart Jellyfin, close and reopen **Add Media**, then hard-refresh the web clie
 - Source-management operations require Jellyfin administrator elevation.
 - Only loopback and private IPv4 source URLs are accepted.
 - A source URL must remain inside a configured private root.
-- Configure Movies, Shows, and Anime under **Media Sources → Default Save Locations**. Each destination must match a current compatible Jellyfin library.
+- Configure Movies, Shows, and Anime under **Setup Media → Default Save Locations**. Each destination must match a current compatible Jellyfin library.
 - Existing local files are not overwritten.
 - Actual media downloads require Jellyfin administrator elevation and can only target a current compatible library path.
 - FTP credentials remain in Jellyfin's plugin configuration.

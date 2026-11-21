@@ -45,9 +45,18 @@ public sealed class ClientScriptController : ControllerBase
             const containerId = 'localIspFtpLoaderHeaderButtonContainer';
             const userMenuItemId = 'localIspFtpLoaderUserMenuItem';
             const navigationStyleId = 'localIspFtpLoaderNavigationStyles';
+            const sidebarMenuId = 'localIspFtpLoaderSidebarPages';
+            const landingRoute = '#/configurationpage?name=localispplugins';
             const addMediaRoute = '#/search';
             const importLinkRoute = '#/configurationpage?name=localispimportlink';
             const discoverRoute = '#/configurationpage?name=localispdiscovery';
+            const sidebarPages = [
+                ['Discover', discoverRoute],
+                ['Search', '#/configurationpage?name=localispsearch'],
+                ['Import Link', importLinkRoute],
+                ['Setup Media', '#/configurationpage?name=localispservers']
+            ];
+            const sidebarParents = new WeakSet();
             let replaceDefaultSearch = null;
 
             function isVisible(element) {
@@ -64,6 +73,75 @@ public sealed class ClientScriptController : ControllerBase
 
             function openImportLink() {
                 window.location.hash = importLinkRoute;
+            }
+
+            function ensureSidebarMenu() {
+                const parent = document.querySelector(`.MuiDrawer-paper a[href$="${landingRoute}"], .mainDrawer a[href$="${landingRoute}"]`);
+                const row = parent?.closest('li') ?? parent;
+                const existing = document.getElementById(sidebarMenuId);
+                if (!row) {
+                    existing?.remove();
+                    return;
+                }
+
+                if (!document.getElementById(navigationStyleId)) {
+                    const style = document.createElement('style');
+                    style.id = navigationStyleId;
+                    style.textContent = `
+                        #${sidebarMenuId} { list-style: none; }
+                        a[aria-controls="${sidebarMenuId}"]::after { content: '▸'; margin-inline-start: auto; }
+                        a[aria-controls="${sidebarMenuId}"][aria-expanded="true"]::after { content: '▾'; }
+                        #${sidebarMenuId} a:not([hidden]) { display: block; color: inherit; text-decoration: none; padding: .55rem .75rem .55rem 3.5rem; }
+                        #${sidebarMenuId} a:hover, #${sidebarMenuId} a[aria-current="page"] { background: rgba(128,128,128,.2); }
+                    `;
+                    document.head.appendChild(style);
+                }
+
+                let menu = existing;
+                if (row.nextElementSibling !== menu || !menu) {
+                    menu?.remove();
+                    menu = document.createElement(row.parentElement.matches('ul, ol') ? 'li' : 'div');
+                    menu.id = sidebarMenuId;
+                    for (const [label, route] of sidebarPages) {
+                        const link = document.createElement('a');
+                        link.textContent = label;
+                        link.href = route;
+                        if (label === 'Setup Media') {
+                            link.hidden = true;
+                            pluginCall('CanManage').then(() => { link.hidden = false; }).catch(() => {});
+                        }
+                        menu.appendChild(link);
+                    }
+                    row.after(menu);
+                }
+
+                if (!sidebarParents.has(parent)) {
+                    sidebarParents.add(parent);
+                    parent.setAttribute('aria-controls', sidebarMenuId);
+                    parent.addEventListener('click', (event) => {
+                        if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                        const submenu = document.getElementById(sidebarMenuId);
+                        if (!submenu) return;
+                        const expanding = submenu.hidden;
+                        setSidebarExpanded(parent, submenu, expanding);
+                        if (!expanding || window.location.hash === landingRoute) event.preventDefault();
+                    });
+                }
+
+                const hash = window.location.hash;
+                if (menu.dataset.route === hash) return;
+                menu.dataset.route = hash;
+                const links = Array.from(menu.querySelectorAll('a'));
+                setSidebarExpanded(parent, menu, hash === landingRoute || links.some(link => link.hash === hash));
+                for (const link of links) {
+                    if (link.hash === hash) link.setAttribute('aria-current', 'page');
+                    else link.removeAttribute('aria-current');
+                }
+            }
+
+            function setSidebarExpanded(parent, menu, expanded) {
+                menu.hidden = !expanded;
+                parent.setAttribute('aria-expanded', String(expanded));
             }
 
             function ensureUserMenuItem() {
@@ -434,6 +512,7 @@ public sealed class ClientScriptController : ControllerBase
                     scheduled = false;
                     ensureButton();
                     ensureUserMenuItem();
+                    ensureSidebarMenu();
                     applySearchReplacement();
                     attachNativeSearch();
                 });
@@ -443,6 +522,7 @@ public sealed class ClientScriptController : ControllerBase
             function start() {
                 ensureEnhancements();
                 loadSettings();
+                window.addEventListener('hashchange', ensureEnhancements);
                 observer.observe(document.body, { childList: true, subtree: true });
             }
 

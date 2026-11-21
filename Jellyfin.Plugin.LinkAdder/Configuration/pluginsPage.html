@@ -8,21 +8,24 @@
             <h2>Media Source Bridge</h2>
             <nav aria-label="Media Source Bridge pages" class="linkAdderPageLinks">
                 <a href="#/configurationpage?name=localispdiscovery">Discover</a>
+                <a href="#/configurationpage?name=localispsearch">Search</a>
                 <a href="#/configurationpage?name=localispimportlink">Import Link</a>
-                <a href="#/configurationpage?name=localispsearch">Search &amp; Add</a>
-                <a href="#/configurationpage?name=localispmediaadd">Add Media</a>
-                <a href="#/configurationpage?name=localispservers" hidden>Media Sources</a>
+                <a href="#/configurationpage?name=localispservers" hidden>Setup Media</a>
             </nav>
         </div>
     </div>
     <style>
         #LocalIspPluginsPage .linkAdderPageLinks {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
             gap: .75rem;
-            max-width: 54rem;
+            max-width: 40rem;
         }
-        #LocalIspPluginsPage .linkAdderPageLinks a {
+        #LocalIspPluginsPage .linkAdderPageLinks a:not([hidden]) {
+            display: flex;
+            align-items: center;
+            min-height: 4rem;
+            box-sizing: border-box;
             padding: 1rem;
             border-radius: .4rem;
             background: rgba(128, 128, 128, .16);
@@ -33,6 +36,10 @@
         #LocalIspPluginsPage .linkAdderPageLinks a:hover,
         #LocalIspPluginsPage .linkAdderPageLinks a:focus-visible {
             background: rgba(128, 128, 128, .32);
+        }
+        #LocalIspPluginsPage .linkAdderPageLinks a:focus-visible {
+            outline: 2px solid currentColor;
+            outline-offset: 2px;
         }
     </style>
     <script type="text/javascript">
